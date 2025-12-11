@@ -6,35 +6,66 @@ interface BookListProps {
   onSelect: (book: Book) => void;
 }
 
+const getStatus = (progress: number) => {
+  if (progress >= 100) return "Đã đọc";
+  if (progress === 0) return "Muốn đọc";
+  return "Đang đọc";
+};
+
 const BookList = ({ books, onUpdateProgress, onSelect }: BookListProps) => {
   return (
-    <div className="card">
-      <div className="section-title">
-        <h3>Đang đọc</h3>
-        <span className="small">{books.length} tựa sách</span>
-      </div>
+    <div className="book-grid">
       {books.map((book) => (
-        <div className="book-row" key={book.id}>
-          <img className="cover" src={book.coverUrl} alt={book.title} />
-          <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <div style={{ fontWeight: 700 }}>{book.title}</div>
-                <div className="small">{book.author}</div>
+        <div className="book-card" key={book.id}>
+          <div
+            className="book-cover"
+            style={{ backgroundImage: `url(${book.coverUrl ?? "https://via.placeholder.com/240x320"})` }}
+            role="img"
+            aria-label={`Bìa sách ${book.title}`}
+          />
+
+          <div className="book-meta">
+            <div>
+              <p className="book-title">{book.title}</p>
+              <p className="book-author">{book.author}</p>
+            </div>
+
+            <div className="book-progress">
+              <div className="book-progress-row">
+                <span>Tiến độ</span>
+                <span>{book.progress}%</span>
               </div>
-              <button className="pill" onClick={() => onSelect(book)}>Review</button>
+              <div className="book-progress-bar">
+                <div className="book-progress-fill" style={{ width: `${book.progress}%` }} />
+              </div>
             </div>
-            <div className="progress" style={{ marginTop: 8, marginBottom: 8 }}>
-              <div className="progress-inner" style={{ width: `${book.progress}%` }} />
+
+            <div className="book-rating">
+              {Array.from({ length: 5 }).map((_, idx) => {
+                const filled = (book.rating ?? 0) >= idx + 1;
+                return (
+                  <span key={idx} className={filled ? "rating-star filled" : "rating-star"} aria-hidden>
+                    ★
+                  </span>
+                );
+              })}
             </div>
-            <input
-              className="input"
-              type="range"
-              min={0}
-              max={100}
-              value={book.progress}
-              onChange={(e) => onUpdateProgress(book.id, Number(e.target.value))}
-            />
+
+            <div className="book-status">{getStatus(book.progress)}</div>
+
+            <div className="book-actions">
+              <input
+                className="range"
+                type="range"
+                min={0}
+                max={100}
+                value={book.progress}
+                onChange={(e) => onUpdateProgress(book.id, Number(e.target.value))}
+              />
+              <button className="secondary-btn" onClick={() => onSelect(book)}>
+                Review
+              </button>
+            </div>
           </div>
         </div>
       ))}
