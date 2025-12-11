@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import Navigation from "../components/Navigation";
 import { Challenge } from "../types";
 
 interface ChallengesPageProps {
@@ -35,90 +36,66 @@ const ChallengesPage = ({ challenges }: ChallengesPageProps) => {
   };
 
   return (
-    <div className="challenges-page">
-      {/* Header */}
-      <header className="challenges-header">
-        <div className="challenges-header-left">
-          <div className="challenges-brand">
-            <div className="challenges-logo">
-              <svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-                <g clipPath="url(#clip0_6_543)">
-                  <path
-                    d="M42.1739 20.1739L27.8261 5.82609C29.1366 7.13663 28.3989 10.1876 26.2002 13.7654C24.8538 15.9564 22.9595 18.3449 20.6522 20.6522C18.3449 22.9595 15.9564 24.8538 13.7654 26.2002C10.1876 28.3989 7.13663 29.1366 5.82609 27.8261L20.1739 42.1739C21.4845 43.4845 24.5355 42.7467 28.1133 40.548C30.3042 39.2016 32.6927 37.3073 35 35C37.3073 32.6927 39.2016 30.3042 40.548 28.1133C42.7467 24.5355 43.4845 21.4845 42.1739 20.1739Z"
-                    fill="currentColor"
-                  />
-                </g>
-                <defs>
-                  <clipPath id="clip0_6_543">
-                    <rect fill="white" height="48" width="48" />
-                  </clipPath>
-                </defs>
-              </svg>
-            </div>
-            <h2 className="challenges-brand-title">BookClub</h2>
+    <div className="dark-page">
+      <header className="dark-header">
+        <div className="brand">
+          <div className="brand-icon">📘</div>
+          <div>
+            <div className="brand-title">BookClub</div>
           </div>
         </div>
-        <div className="challenges-header-right">
-          <div className="challenges-level-badge">
-            <span className="challenges-level-icon">⚡</span>
-            <span className="challenges-level-text">Level 12</span>
-          </div>
-          <button className="challenges-add-btn">+ Thêm sách</button>
-          <div
-            className="challenges-avatar"
-            style={{
-              backgroundImage:
-                'url("https://lh3.googleusercontent.com/aida-public/AB6AXuDF3FJbtVTxS_Xx77pIiOAPd32DJgeayGhR0bIkc2mPnP2_QnhsST40kyjrf69QI2OERzFLj2H0BJ-G6MqkhYyYmFEi51ozJqqbBy9qGzNFDgUsMZ-ef5Km8Y8aDdRunT00P5hJcWv90ADWIMWt7kwugu7Kj1sGtaAwZLmH494iRSuSlx8uHs7-zc6-rMKaoosWQ30KmzfWTzle0fnxLES_aGWYn7RyAsU6ozp-4pV6rWa7DN7Vb-zcWk3eFjKdxvqg2zAjadM1GBVt")'
-            }}
-          />
+        <div className="header-nav">
+          <Navigation />
+        </div>
+        <div className="header-actions">
+          <button className="primary-btn">+ Thêm sách</button>
+          <div className="avatar" aria-label="User avatar" />
         </div>
       </header>
 
-      <main className="challenges-main">
-        {/* Title Section */}
-        <div className="challenges-title-section">
-          <p className="challenges-title">Thử thách đọc</p>
+      <section className="dark-controls">
+        <div className="search">
+          <span className="search-icon">🔍</span>
+          <input
+            className="search-input"
+            placeholder="Tìm kiếm thử thách..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
+        <div className="tabs">
+          <button
+            className={`tab ${activeTab === "all" ? "active" : ""}`}
+            onClick={() => setActiveTab("all")}
+            type="button"
+          >
+            Tất cả
+          </button>
+          <button
+            className={`tab ${activeTab === "active" ? "active" : ""}`}
+            onClick={() => setActiveTab("active")}
+            type="button"
+          >
+            Đang tham gia
+          </button>
+          <button
+            className={`tab ${activeTab === "not_joined" ? "active" : ""}`}
+            onClick={() => setActiveTab("not_joined")}
+            type="button"
+          >
+            Chưa tham gia
+          </button>
+          <button
+            className={`tab ${activeTab === "completed" ? "active" : ""}`}
+            onClick={() => setActiveTab("completed")}
+            type="button"
+          >
+            Đã hoàn thành
+          </button>
+        </div>
+      </section>
 
-        {/* Search and Tabs */}
-        <div className="challenges-controls">
-          <div className="challenges-search-wrapper">
-            <div className="challenges-search-icon">🔍</div>
-            <input
-              className="challenges-search-input"
-              type="text"
-              placeholder="Tìm kiếm thử thách..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <div className="challenges-tabs">
-            <button
-              className={`challenges-tab ${activeTab === "all" ? "active" : ""}`}
-              onClick={() => setActiveTab("all")}
-            >
-              <p>Tất cả</p>
-            </button>
-            <button
-              className={`challenges-tab ${activeTab === "active" ? "active" : ""}`}
-              onClick={() => setActiveTab("active")}
-            >
-              <p>Đang tham gia</p>
-            </button>
-            <button
-              className={`challenges-tab ${activeTab === "not_joined" ? "active" : ""}`}
-              onClick={() => setActiveTab("not_joined")}
-            >
-              <p>Chưa tham gia</p>
-            </button>
-            <button
-              className={`challenges-tab ${activeTab === "completed" ? "active" : ""}`}
-              onClick={() => setActiveTab("completed")}
-            >
-              <p>Đã hoàn thành</p>
-            </button>
-          </div>
-        </div>
+      <main className="dark-page-content" style={{ padding: "24px 16px" }}>
 
         {/* Challenges Grid */}
         <div className="challenges-grid">

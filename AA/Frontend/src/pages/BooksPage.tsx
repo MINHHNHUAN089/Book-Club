@@ -40,7 +40,6 @@ const BooksPage = ({ books, onUpdateProgress }: BooksPageProps) => {
           <div className="brand-icon">📘</div>
           <div>
             <div className="brand-title">BookClub</div>
-            <div className="brand-sub">Danh sách sách của tôi</div>
           </div>
         </div>
         <div className="header-nav">

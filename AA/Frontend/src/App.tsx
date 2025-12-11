@@ -10,6 +10,8 @@ import GroupsPage from "./pages/GroupsPage";
 import ChallengesPage from "./pages/ChallengesPage";
 import AuthorsPage from "./pages/AuthorsPage";
 import DiscoverPage from "./pages/DiscoverPage";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
 import { GoogleVolume } from "./api/googleBooks";
 
 const App = () => {
@@ -110,6 +112,8 @@ const App = () => {
             <Route path="/challenges" element={<ChallengesPage challenges={mockChallenges} />} />
             <Route path="/authors" element={<AuthorsPage authors={mockAuthors} />} />
             <Route path="/discover" element={<DiscoverPage onImport={handleImportBook} />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
             <Route path="/" element={<Navigate to="/books" replace />} />
           </Routes>
         </div>

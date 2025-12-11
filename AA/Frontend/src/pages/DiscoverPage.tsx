@@ -1,4 +1,5 @@
 import { FormEvent, useState } from "react";
+import Navigation from "../components/Navigation";
 import { searchBooks, GoogleVolume } from "../api/googleBooks";
 
 interface DiscoverPageProps {
@@ -26,41 +27,73 @@ const DiscoverPage = ({ onImport }: DiscoverPageProps) => {
   };
 
   return (
-    <div className="card">
-      <div className="section-title">
-        <h3>Khám phá từ Google Books</h3>
-        <span className="small">Tìm kiếm và import metadata</span>
-      </div>
-      <form className="form" onSubmit={handleSearch} style={{ marginBottom: 12 }}>
-        <input
-          className="input"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Nhập tên sách, tác giả..."
-        />
-        <button className="button" type="submit" disabled={loading}>
-          {loading ? "Đang tìm..." : "Tìm sách"}
-        </button>
-      </form>
-      {error && <div className="tag" style={{ background: "#fee2e2", color: "#b91c1c" }}>{error}</div>}
-      <div className="grid">
-        {results.map((volume) => (
-          <div key={volume.id} className="card" style={{ boxShadow: "none", border: "1px solid #e2e8f0" }}>
-            <div style={{ fontWeight: 700 }}>{volume.volumeInfo.title ?? "Chưa có tiêu đề"}</div>
-            <div className="small">{volume.volumeInfo.authors?.join(", ") ?? "Ẩn danh"}</div>
-            {volume.volumeInfo.imageLinks?.thumbnail && (
-              <img
-                src={volume.volumeInfo.imageLinks.thumbnail}
-                alt={volume.volumeInfo.title}
-                style={{ width: "100%", borderRadius: 12, marginTop: 8 }}
-              />
-            )}
-            <button className="pill" onClick={() => onImport(volume)}>
-              Import vào danh sách
-            </button>
+    <div className="dark-page">
+      <header className="dark-header">
+        <div className="brand">
+          <div className="brand-icon">📘</div>
+          <div>
+            <div className="brand-title">BookClub</div>
           </div>
-        ))}
-      </div>
+        </div>
+        <div className="header-nav">
+          <Navigation />
+        </div>
+        <div className="header-actions">
+          <button className="primary-btn">+ Thêm sách</button>
+          <div className="avatar" aria-label="User avatar" />
+        </div>
+      </header>
+
+      <section className="dark-controls">
+        <form
+          onSubmit={handleSearch}
+          style={{ display: "flex", gap: "12px", width: "100%", maxWidth: "600px" }}
+        >
+          <div className="search" style={{ flex: 1 }}>
+            <span className="search-icon">🔍</span>
+            <input
+              className="search-input"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Nhập tên sách, tác giả..."
+            />
+          </div>
+          <button className="primary-btn" type="submit" disabled={loading}>
+            {loading ? "Đang tìm..." : "Tìm sách"}
+          </button>
+        </form>
+      </section>
+
+      <main className="dark-page-content" style={{ padding: "24px 16px" }}>
+        {error && (
+          <div style={{ background: "rgba(239, 68, 68, 0.1)", color: "#fca5a5", padding: "12px", borderRadius: "8px", marginBottom: "16px" }}>
+            {error}
+          </div>
+        )}
+        <div className="book-grid">
+          {results.map((volume) => (
+            <div key={volume.id} className="book-card">
+              {volume.volumeInfo.imageLinks?.thumbnail && (
+                <div
+                  className="book-cover"
+                  style={{ backgroundImage: `url(${volume.volumeInfo.imageLinks.thumbnail})` }}
+                  role="img"
+                  aria-label={`Bìa sách ${volume.volumeInfo.title}`}
+                />
+              )}
+              <div className="book-meta">
+                <div>
+                  <p className="book-title">{volume.volumeInfo.title ?? "Chưa có tiêu đề"}</p>
+                  <p className="book-author">{volume.volumeInfo.authors?.join(", ") ?? "Ẩn danh"}</p>
+                </div>
+                <button className="secondary-btn" onClick={() => onImport(volume)}>
+                  Import vào danh sách
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </main>
     </div>
   );
 };
