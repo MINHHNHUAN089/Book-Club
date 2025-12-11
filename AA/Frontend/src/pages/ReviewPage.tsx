@@ -1,4 +1,6 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
+import Navigation from "../components/Navigation";
 import ReviewForm from "../components/ReviewForm";
 import { Book } from "../types";
 
@@ -10,21 +12,38 @@ interface ReviewPageProps {
 }
 
 const ReviewPage = ({ books, selectedBook, onSelectBook, onSaveReview }: ReviewPageProps) => {
+  const [searchParams] = useSearchParams();
+  const bookIdFromUrl = searchParams.get("bookId");
+
+  useEffect(() => {
+    if (bookIdFromUrl) {
+      const book = books.find((b) => b.id === bookIdFromUrl);
+      if (book) {
+        onSelectBook(book);
+      }
+    }
+  }, [bookIdFromUrl, books, onSelectBook]);
+
   const avgProgress = useMemo(() => {
     if (!books.length) return 0;
     const total = books.reduce((sum, b) => sum + b.progress, 0);
     return Math.round(total / books.length);
   }, [books]);
 
+  const currentBook = selectedBook || (bookIdFromUrl ? books.find((b) => b.id === bookIdFromUrl) : null) || books[0] || null;
+
   return (
     <div className="dark-page">
       <header className="dark-header">
         <div className="brand">
-          <div className="brand-icon">📝</div>
+          <div className="brand-icon">📘</div>
           <div>
-            <div className="brand-title">Review</div>
-            <div className="brand-sub">Đánh giá & nhận xét</div>
+            <div className="brand-title">BookClub</div>
+            <div className="brand-sub">Danh sách sách của tôi</div>
           </div>
+        </div>
+        <div className="header-nav">
+          <Navigation />
         </div>
         <div className="header-actions" style={{ gap: 6 }}>
           <div className="tag">Tiến độ TB: {avgProgress}%</div>
@@ -53,7 +72,7 @@ const ReviewPage = ({ books, selectedBook, onSelectBook, onSaveReview }: ReviewP
         </div>
       </section>
 
-      <ReviewForm book={selectedBook ?? books[0] ?? null} onSave={onSaveReview} />
+      <ReviewForm book={currentBook} onSave={onSaveReview} />
     </div>
   );
 };

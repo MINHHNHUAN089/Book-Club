@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink } from "react-router-dom";
+import Navigation from "../components/Navigation";
 import { Book, Challenge } from "../types";
 
 interface RecommendationsPageProps {
@@ -102,47 +102,25 @@ const RecommendationsPage = ({ books, onAddBook }: RecommendationsPageProps) => 
   };
 
   return (
-    <div className="discover-page">
-      {/* Header */}
-      <header className="discover-header">
-        <div className="discover-header-left">
-          <div className="discover-brand">
-            <div className="discover-logo">
-              <svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-                <path d="M6 6H42L36 24L42 42H6L12 24L6 6Z" fill="currentColor" />
-              </svg>
-            </div>
-            <h2 className="discover-brand-title">BookTracker</h2>
-          </div>
-          <div className="discover-search-wrapper">
-            <div className="discover-search-icon">🔍</div>
-            <input
-              className="discover-search-input"
-              type="text"
-              placeholder="Search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+    <div className="dark-page">
+      <header className="dark-header">
+        <div className="brand">
+          <div className="brand-icon">📘</div>
+          <div>
+            <div className="brand-title">BookClub</div>
+            <div className="brand-sub">Danh sách sách của tôi</div>
           </div>
         </div>
-        <div className="discover-header-right">
-          <div className="discover-nav-links">
-            <NavLink to="/books" className={({ isActive }) => `discover-nav-link ${isActive ? "" : ""}`}>
-              Thư viện của tôi
-            </NavLink>
-            <NavLink to="/recommendations" className={({ isActive }) => `discover-nav-link ${isActive ? "active" : ""}`}>
-              Khám phá
-            </NavLink>
-            <NavLink to="/groups" className={({ isActive }) => `discover-nav-link ${isActive ? "" : ""}`}>
-              Câu lạc bộ
-            </NavLink>
-          </div>
-          <button className="discover-notification-btn">🔔</button>
-          <div className="discover-avatar" style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuDfZaMfMVCD2kAwBaGJBzos3R3qW1qCgqQd9biZJiDF0nPFbPTIpCVgBw6q5CPwz4TlY0sTtmIFSxv2MZWFzI8xFBAIgYFxxpNVQgyxOlTOFzxGdlo-Rg1V8Y0gqvPIct8gaCrhXyXdal_GdOtaqfyHAH6t1-FtAVOFut3vEldFWm3vnXlhcvguIcgWYurBkhgtAFEES0pxcQpuam2VfotpFgakg3L7cjxYwSX5cFNsNdIVklX9QvBMsSBw4HF5OgCytNxXgjXvXusn")' }} />
+        <div className="header-nav">
+          <Navigation />
+        </div>
+        <div className="header-actions">
+          <button className="primary-btn">+ Thêm sách</button>
+          <div className="avatar" aria-label="User avatar" />
         </div>
       </header>
 
-      <main className="discover-main">
+      <main className="dark-page-content" style={{ padding: "24px 16px" }}>
         {/* Section 1: Recommended for you */}
         <section className="discover-section">
           <h2 className="discover-section-title">Gợi ý cho bạn</h2>

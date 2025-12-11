@@ -78,55 +78,8 @@ const App = () => {
 
   return (
     <BrowserRouter>
-      <div className="app-shell">
-        <div className="app-container">
-          <header className="topbar">
-            <div className="hero-card">
-              <div className="hero-pill">📚 Book Club / Reading Tracker</div>
-              <h1>Theo dõi sách, review, rating và thảo luận</h1>
-              <p>
-                Quản lý sách đang đọc, chia sẻ review, tham gia book club, thử thách đọc và theo dõi tác giả yêu thích.
-              </p>
-              <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 12 }}>
-                <div className="tag">Tiến độ trung bình: {avgProgress}%</div>
-                <div className="tag">Sách đã thêm: {books.length}</div>
-                <div className="tag">Nhóm: {mockGroups.length} | Thử thách: {mockChallenges.length}</div>
-              </div>
-            </div>
-            <div className="card info-card">
-              <h3>Ghi chú nhanh</h3>
-              <p className="small">Google Books API: tìm kiếm và import metadata sách.</p>
-              <p className="small">Backend (FastAPI + Postgres): lưu user, sách, review, nhóm.</p>
-              <p className="small">Kết nối API: cập nhật base URL tại lớp fetch.</p>
-            </div>
-          </header>
-
-          <nav className="nav">
-            <NavLink to="/books" className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
-              Danh sách
-            </NavLink>
-            <NavLink to="/review" className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
-              Review
-            </NavLink>
-            <NavLink
-              to="/recommendations"
-              className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
-            >
-              Gợi ý
-            </NavLink>
-            <NavLink to="/groups" className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
-              Book club
-            </NavLink>
-            <NavLink to="/challenges" className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
-              Thử thách
-            </NavLink>
-            <NavLink to="/authors" className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
-              Tác giả
-            </NavLink>
-            <NavLink to="/discover" className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
-              Khám phá (Google Books)
-            </NavLink>
-          </nav>
+      <div className="app-shell-dark">
+        <div className="app-container-dark">
 
           <Routes>
             <Route

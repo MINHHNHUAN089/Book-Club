@@ -16,7 +16,7 @@ const BookList = ({ books, onUpdateProgress, onSelect }: BookListProps) => {
   return (
     <div className="book-grid">
       {books.map((book) => (
-        <div className="book-card" key={book.id}>
+        <div className="book-card" key={book.id} onClick={() => onSelect(book)} style={{ cursor: "pointer" }}>
           <div
             className="book-cover"
             style={{ backgroundImage: `url(${book.coverUrl ?? "https://via.placeholder.com/240x320"})` }}
@@ -61,8 +61,15 @@ const BookList = ({ books, onUpdateProgress, onSelect }: BookListProps) => {
                 max={100}
                 value={book.progress}
                 onChange={(e) => onUpdateProgress(book.id, Number(e.target.value))}
+                onClick={(e) => e.stopPropagation()}
               />
-              <button className="secondary-btn" onClick={() => onSelect(book)}>
+              <button
+                className="secondary-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelect(book);
+                }}
+              >
                 Review
               </button>
             </div>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Navigation from "../components/Navigation";
 import { ClubGroup } from "../types";
 
 interface GroupsPageProps {
@@ -24,87 +25,51 @@ const GroupsPage = ({ groups }: GroupsPageProps) => {
   });
 
   return (
-    <div className="groups-page">
-      {/* Header */}
-      <header className="groups-header">
-        <div className="groups-header-left">
-          <div className="groups-brand">
-            <span className="groups-icon">📚</span>
-            <h2 className="groups-title">Câu lạc bộ sách</h2>
+    <div className="dark-page">
+      <header className="dark-header">
+        <div className="brand">
+          <div className="brand-icon">📘</div>
+          <div>
+            <div className="brand-title">BookClub</div>
+            <div className="brand-sub">Danh sách sách của tôi</div>
           </div>
         </div>
-        <div className="groups-header-right">
-          <div className="groups-search-desktop">
-            <div className="groups-search-icon">🔍</div>
-            <input
-              className="groups-search-input"
-              type="text"
-              placeholder="Search for clubs..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <button className="groups-create-btn">
-            <span className="groups-create-icon">+</span>
-            <span>Tạo Câu lạc bộ</span>
-          </button>
+        <div className="header-nav">
+          <Navigation />
+        </div>
+        <div className="header-actions">
+          <button className="primary-btn">+ Tạo Câu lạc bộ</button>
+          <div className="avatar" aria-label="User avatar" />
         </div>
       </header>
 
-      {/* Tabs */}
-      <div className="groups-tabs-container">
-        <div className="groups-tabs">
-          <button
-            className={`groups-tab ${activeTab === "explore" ? "active" : ""}`}
-            onClick={() => setActiveTab("explore")}
-          >
-            <p>Khám phá</p>
-          </button>
-          <button
-            className={`groups-tab ${activeTab === "my-clubs" ? "active" : ""}`}
-            onClick={() => setActiveTab("my-clubs")}
-          >
-            <p>Câu lạc bộ của tôi</p>
-          </button>
-        </div>
-      </div>
-
-      {/* Search and Filter Chips */}
-      <div className="groups-filters">
-        <div className="groups-search-mobile">
-          <div className="groups-search-icon">🔍</div>
+      <section className="dark-controls">
+        <div className="search">
+          <span className="search-icon">🔍</span>
           <input
-            className="groups-search-input"
-            type="text"
+            className="search-input"
             placeholder="Tìm kiếm câu lạc bộ..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <div className="groups-filter-chips">
+        <div className="tabs">
           <button
-            className={`groups-filter-chip ${sortBy === "members" ? "active" : ""}`}
-            onClick={() => setSortBy("members")}
+            className={`tab ${activeTab === "explore" ? "active" : ""}`}
+            onClick={() => setActiveTab("explore")}
+            type="button"
           >
-            <p>Theo số lượng thành viên</p>
-            <span className="groups-filter-arrow">▼</span>
+            Khám phá
           </button>
           <button
-            className={`groups-filter-chip ${sortBy === "activity" ? "active" : ""}`}
-            onClick={() => setSortBy("activity")}
+            className={`tab ${activeTab === "my-clubs" ? "active" : ""}`}
+            onClick={() => setActiveTab("my-clubs")}
+            type="button"
           >
-            <p>Theo hoạt động gần đây</p>
-            <span className="groups-filter-arrow">▼</span>
-          </button>
-          <button
-            className={`groups-filter-chip ${sortBy === "date" ? "active" : ""}`}
-            onClick={() => setSortBy("date")}
-          >
-            <p>Theo ngày tạo</p>
-            <span className="groups-filter-arrow">▼</span>
+            Câu lạc bộ của tôi
           </button>
         </div>
-      </div>
+      </section>
 
       {/* Club Grid */}
       <div className="groups-grid">

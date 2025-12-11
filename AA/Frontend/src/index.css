@@ -30,6 +30,19 @@ a {
   padding: 32px 20px 64px;
 }
 
+/* Dark theme app shell */
+.app-shell-dark {
+  min-height: 100vh;
+  background: #101c22;
+  color: #e2e8f0;
+}
+
+.app-container-dark {
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
 .hero {
   display: grid;
   grid-template-columns: 1fr;
@@ -230,6 +243,92 @@ a {
   box-shadow: 0 8px 16px rgba(37, 99, 235, 0.12);
 }
 
+/* Dark theme navigation */
+.nav-dark {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 16px 20px;
+  background: #101c22;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.nav-link-dark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.nav-link-dark:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.nav-link-dark.active {
+  background: #13a4ec;
+  color: white;
+  border-color: #13a4ec;
+  box-shadow: 0 4px 12px rgba(19, 164, 236, 0.3);
+}
+
+/* Page Navigation (inside page content) */
+.page-nav {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-nav-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.page-nav-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.page-nav-link.active {
+  background: #13a4ec;
+  color: white;
+  border-color: #13a4ec;
+  box-shadow: 0 2px 8px rgba(19, 164, 236, 0.3);
+}
+
+@media (max-width: 768px) {
+  .page-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: 100%;
+    min-width: 0;
+  }
+}
+
 @media (min-width: 960px) {
   .hero {
     grid-template-columns: 2fr 1fr;
@@ -261,6 +360,27 @@ a {
   gap: 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   padding-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.header-nav {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  justify-content: center;
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .dark-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .header-nav {
+    width: 100%;
+    justify-content: flex-start;
+  }
 }
 
 .brand {

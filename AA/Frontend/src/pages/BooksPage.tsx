@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import BookList from "../components/BookList";
+import Navigation from "../components/Navigation";
 import { Book } from "../types";
 
 type Filter = "all" | "reading" | "want_to_read" | "finished";
@@ -10,6 +12,7 @@ interface BooksPageProps {
 }
 
 const BooksPage = ({ books, onUpdateProgress }: BooksPageProps) => {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
 
@@ -39,6 +42,9 @@ const BooksPage = ({ books, onUpdateProgress }: BooksPageProps) => {
             <div className="brand-title">BookClub</div>
             <div className="brand-sub">Danh sách sách của tôi</div>
           </div>
+        </div>
+        <div className="header-nav">
+          <Navigation />
         </div>
         <div className="header-actions">
           <button className="primary-btn">+ Thêm sách</button>
@@ -75,7 +81,11 @@ const BooksPage = ({ books, onUpdateProgress }: BooksPageProps) => {
         </div>
       </section>
 
-      <BookList books={filteredBooks} onUpdateProgress={onUpdateProgress} onSelect={() => {}} />
+      <BookList
+        books={filteredBooks}
+        onUpdateProgress={onUpdateProgress}
+        onSelect={(book) => navigate(`/review?bookId=${book.id}`)}
+      />
     </div>
   );
 };
