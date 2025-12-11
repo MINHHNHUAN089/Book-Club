@@ -69,6 +69,13 @@ const App = () => {
     });
   };
 
+  const handleAddBookFromRecommendations = (book: Book) => {
+    setBooks((prev) => {
+      if (prev.some((b) => b.id === book.id)) return prev;
+      return [...prev, { ...book, progress: 0, rating: 0 }];
+    });
+  };
+
   return (
     <BrowserRouter>
       <div className="app-shell">
@@ -142,7 +149,10 @@ const App = () => {
                 />
               }
             />
-            <Route path="/recommendations" element={<RecommendationsPage books={recommendations} />} />
+            <Route
+              path="/recommendations"
+              element={<RecommendationsPage books={recommendations} onAddBook={handleAddBookFromRecommendations} />}
+            />
             <Route path="/groups" element={<GroupsPage groups={mockGroups} />} />
             <Route path="/challenges" element={<ChallengesPage challenges={mockChallenges} />} />
             <Route path="/authors" element={<AuthorsPage authors={mockAuthors} />} />
