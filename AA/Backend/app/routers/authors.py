@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, func
 from app.database import get_db
-from app.models import Author, User, Book
+from app.models import Author, User, Book, book_author_association
 from app.schemas import AuthorCreate, AuthorResponse, AuthorStatistics, BookResponse
 from app.auth import get_current_active_user
 
@@ -120,7 +120,9 @@ def get_author_books(
     if not author:
         raise HTTPException(status_code=404, detail="Author not found")
     
-    books = db.query(Book).join(Book.authors).filter(Author.id == author_id)\
+    books = db.query(Book)\
+        .join(book_author_association, Book.id == book_author_association.c.book_id)\
+        .filter(book_author_association.c.author_id == author_id)\
         .offset(skip).limit(limit).all()
     
     return books
@@ -134,8 +136,8 @@ def get_author_statistics(author_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Author not found")
     
     total_books = db.query(func.count(Book.id))\
-        .join(Book.authors)\
-        .filter(Author.id == author_id)\
+        .join(book_author_association, Book.id == book_author_association.c.book_id)\
+        .filter(book_author_association.c.author_id == author_id)\
         .scalar() or 0
     
     return AuthorStatistics(
