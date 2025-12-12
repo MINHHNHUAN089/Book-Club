@@ -1,0 +1,189 @@
+from pydantic import BaseModel, EmailStr, Field
+from typing import Optional, List
+from datetime import datetime
+
+
+# User Schemas
+class UserBase(BaseModel):
+    name: str
+    email: EmailStr
+
+
+class UserCreate(UserBase):
+    password: str = Field(..., min_length=6)
+
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class UserResponse(UserBase):
+    id: int
+    avatar_url: Optional[str] = None
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+# Token Schemas
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    email: Optional[str] = None
+
+
+# Author Schemas
+class AuthorBase(BaseModel):
+    name: str
+    bio: Optional[str] = None
+    avatar_url: Optional[str] = None
+
+
+class AuthorCreate(AuthorBase):
+    pass
+
+
+class AuthorResponse(AuthorBase):
+    id: int
+    followers_count: int = 0
+    
+    class Config:
+        from_attributes = True
+
+
+# Book Schemas
+class BookBase(BaseModel):
+    title: str
+    isbn: Optional[str] = None
+    cover_url: Optional[str] = None
+    description: Optional[str] = None
+    published_date: Optional[str] = None
+    page_count: Optional[int] = None
+    google_books_id: Optional[str] = None
+
+
+class BookCreate(BookBase):
+    author_names: Optional[List[str]] = []
+
+
+class BookResponse(BookBase):
+    id: int
+    authors: List[AuthorResponse] = []
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+# UserBook Schemas
+class UserBookBase(BaseModel):
+    status: str = "want_to_read"  # want_to_read, reading, completed, paused
+    progress: int = Field(0, ge=0, le=100)
+    rating: Optional[float] = Field(None, ge=0, le=5)
+
+
+class UserBookCreate(UserBookBase):
+    book_id: int
+
+
+class UserBookUpdate(UserBookBase):
+    pass
+
+
+class UserBookResponse(UserBookBase):
+    id: int
+    book: BookResponse
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+
+# Review Schemas
+class ReviewBase(BaseModel):
+    rating: float = Field(..., ge=0, le=5)
+    review_text: Optional[str] = None
+
+
+class ReviewCreate(ReviewBase):
+    book_id: int
+
+
+class ReviewUpdate(ReviewBase):
+    pass
+
+
+class ReviewResponse(ReviewBase):
+    id: int
+    user: UserResponse
+    book: BookResponse
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+
+# Group Schemas
+class GroupBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    topic: Optional[str] = None
+    cover_url: Optional[str] = None
+
+
+class GroupCreate(GroupBase):
+    current_book_id: Optional[int] = None
+
+
+class GroupResponse(GroupBase):
+    id: int
+    members_count: int = 0
+    current_book: Optional[BookResponse] = None
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+# Challenge Schemas
+class ChallengeBase(BaseModel):
+    title: str
+    description: Optional[str] = None
+    cover_url: Optional[str] = None
+    target_books: int
+    start_date: datetime
+    end_date: datetime
+    xp_reward: int = 0
+    badge: Optional[str] = None
+    tags: Optional[str] = None
+
+
+class ChallengeCreate(ChallengeBase):
+    pass
+
+
+class ChallengeResponse(ChallengeBase):
+    id: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class UserChallengeResponse(BaseModel):
+    challenge: ChallengeResponse
+    progress: int = 0
+    completed: bool = False
+    
+    class Config:
+        from_attributes = True
+
