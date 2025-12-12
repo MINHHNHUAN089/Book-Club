@@ -3,8 +3,9 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from app.database import get_db
-from app.models import Book, Author, UserBook, User
-from app.schemas import BookCreate, BookResponse, UserBookCreate, UserBookResponse, UserBookUpdate
+from app.models import Book, Author, UserBook, User, Review
+from app.schemas import BookCreate, BookResponse, UserBookCreate, UserBookResponse, UserBookUpdate, BookStatistics, ReviewResponse
+from sqlalchemy import func, desc
 from app.auth import get_current_active_user
 
 router = APIRouter(prefix="/api/books", tags=["books"])
@@ -148,12 +149,12 @@ def update_my_book(
     
     # Update timestamps
     if book_update.status == "reading" and not user_book.started_at:
-        from datetime import datetime
-        user_book.started_at = datetime.utcnow()
+        from datetime import datetime, timezone
+        user_book.started_at = datetime.now(timezone.utc)
     
     if book_update.status == "completed" and not user_book.completed_at:
-        from datetime import datetime
-        user_book.completed_at = datetime.utcnow()
+        from datetime import datetime, timezone
+        user_book.completed_at = datetime.now(timezone.utc)
     
     db.commit()
     db.refresh(user_book)
@@ -178,4 +179,69 @@ def remove_book_from_my_list(
     db.delete(user_book)
     db.commit()
     return None
+
+
+@router.get("/{book_id}/reviews", response_model=List[ReviewResponse])
+def get_book_reviews(
+    book_id: int,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db)
+):
+    """Get reviews for a specific book"""
+    book = db.query(Book).filter(Book.id == book_id).first()
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+    
+    reviews = db.query(Review).filter(Review.book_id == book_id)\
+        .offset(skip).limit(limit).all()
+    
+    return reviews
+
+
+@router.get("/{book_id}/statistics", response_model=BookStatistics)
+def get_book_statistics(book_id: int, db: Session = Depends(get_db)):
+    """Get statistics for a specific book"""
+    book = db.query(Book).filter(Book.id == book_id).first()
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+    
+    # Get review statistics
+    review_stats = db.query(
+        func.count(Review.id).label('total_reviews'),
+        func.avg(Review.rating).label('average_rating')
+    ).filter(Review.book_id == book_id).first()
+    
+    # Get total readers
+    total_readers = db.query(func.count(UserBook.id)).filter(
+        UserBook.book_id == book_id
+    ).scalar() or 0
+    
+    return BookStatistics(
+        total_books=1,
+        total_reviews=review_stats.total_reviews or 0,
+        average_rating=float(review_stats.average_rating) if review_stats.average_rating else None,
+        total_readers=total_readers
+    )
+
+
+@router.get("/popular/list", response_model=List[BookResponse])
+def get_popular_books(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db)
+):
+    """Get popular books based on number of readers and reviews"""
+    # Get books ordered by number of user_books and reviews
+    popular_books = db.query(Book)\
+        .outerjoin(UserBook)\
+        .outerjoin(Review)\
+        .group_by(Book.id)\
+        .order_by(
+            desc(func.count(UserBook.id)),
+            desc(func.count(Review.id))
+        )\
+        .offset(skip).limit(limit).all()
+    
+    return popular_books
 

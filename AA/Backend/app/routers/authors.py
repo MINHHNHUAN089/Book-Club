@@ -1,10 +1,10 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from app.database import get_db
-from app.models import Author, User
-from app.schemas import AuthorCreate, AuthorResponse
+from app.models import Author, User, Book
+from app.schemas import AuthorCreate, AuthorResponse, AuthorStatistics, BookResponse
 from app.auth import get_current_active_user
 
 router = APIRouter(prefix="/api/authors", tags=["authors"])
@@ -106,4 +106,40 @@ def get_followed_authors(
     """Get current user's followed authors"""
     authors = db.query(Author).filter(Author.followers.contains(current_user)).all()
     return authors
+
+
+@router.get("/{author_id}/books", response_model=List[BookResponse])
+def get_author_books(
+    author_id: int,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=100),
+    db: Session = Depends(get_db)
+):
+    """Get all books by a specific author"""
+    author = db.query(Author).filter(Author.id == author_id).first()
+    if not author:
+        raise HTTPException(status_code=404, detail="Author not found")
+    
+    books = db.query(Book).join(Book.authors).filter(Author.id == author_id)\
+        .offset(skip).limit(limit).all()
+    
+    return books
+
+
+@router.get("/{author_id}/statistics", response_model=AuthorStatistics)
+def get_author_statistics(author_id: int, db: Session = Depends(get_db)):
+    """Get statistics for a specific author"""
+    author = db.query(Author).filter(Author.id == author_id).first()
+    if not author:
+        raise HTTPException(status_code=404, detail="Author not found")
+    
+    total_books = db.query(func.count(Book.id))\
+        .join(Book.authors)\
+        .filter(Author.id == author_id)\
+        .scalar() or 0
+    
+    return AuthorStatistics(
+        total_books=total_books,
+        total_followers=author.followers_count
+    )
 

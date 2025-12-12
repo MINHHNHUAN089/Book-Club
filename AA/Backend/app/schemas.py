@@ -18,6 +18,16 @@ class UserLogin(BaseModel):
     password: str
 
 
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    avatar_url: Optional[str] = None
+
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=6)
+
+
 class UserResponse(UserBase):
     id: int
     avatar_url: Optional[str] = None
@@ -144,6 +154,10 @@ class GroupCreate(GroupBase):
     current_book_id: Optional[int] = None
 
 
+class GroupUpdate(GroupBase):
+    current_book_id: Optional[int] = None
+
+
 class GroupResponse(GroupBase):
     id: int
     members_count: int = 0
@@ -152,6 +166,10 @@ class GroupResponse(GroupBase):
     
     class Config:
         from_attributes = True
+
+
+class MemberResponse(UserResponse):
+    pass
 
 
 # Challenge Schemas
@@ -179,6 +197,10 @@ class ChallengeResponse(ChallengeBase):
         from_attributes = True
 
 
+class ChallengeProgressUpdate(BaseModel):
+    progress: int = Field(..., ge=0)
+
+
 class UserChallengeResponse(BaseModel):
     challenge: ChallengeResponse
     progress: int = 0
@@ -186,4 +208,23 @@ class UserChallengeResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+# Statistics Schemas
+class BookStatistics(BaseModel):
+    total_books: int = 0
+    total_reviews: int = 0
+    average_rating: Optional[float] = None
+    total_readers: int = 0
+
+
+class AuthorStatistics(BaseModel):
+    total_books: int = 0
+    total_followers: int = 0
+
+
+class ChallengeStatistics(BaseModel):
+    total_participants: int = 0
+    completed_count: int = 0
+    average_progress: float = 0.0
 

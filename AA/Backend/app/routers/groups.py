@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from app.database import get_db
 from app.models import Group, User, Book
-from app.schemas import GroupCreate, GroupResponse
+from app.schemas import GroupCreate, GroupResponse, GroupUpdate, MemberResponse
 from app.auth import get_current_active_user
 
 router = APIRouter(prefix="/api/groups", tags=["groups"])
@@ -126,4 +126,82 @@ def get_my_groups(
     """Get current user's groups"""
     groups = db.query(Group).filter(Group.members.contains(current_user)).all()
     return groups
+
+
+@router.patch("/{group_id}", response_model=GroupResponse)
+def update_group(
+    group_id: int,
+    group_update: GroupUpdate,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Update a group (only creator can update)"""
+    group = db.query(Group).filter(Group.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    
+    # Check if user is the creator
+    if group.created_by != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only group creator can update the group"
+        )
+    
+    # Verify current_book_id if provided
+    if group_update.current_book_id:
+        book = db.query(Book).filter(Book.id == group_update.current_book_id).first()
+        if not book:
+            raise HTTPException(status_code=404, detail="Book not found")
+    
+    # Update fields
+    update_data = group_update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(group, field, value)
+    
+    db.commit()
+    db.refresh(group)
+    return group
+
+
+@router.get("/{group_id}/members", response_model=List[MemberResponse])
+def get_group_members(
+    group_id: int,
+    db: Session = Depends(get_db)
+):
+    """Get all members of a group"""
+    group = db.query(Group).filter(Group.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    
+    return group.members
+
+
+@router.post("/{group_id}/set-current-book", response_model=GroupResponse)
+def set_current_book(
+    group_id: int,
+    book_id: int = Query(...),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Set the current book for a group (only creator can set)"""
+    group = db.query(Group).filter(Group.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    
+    # Check if user is the creator
+    if group.created_by != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only group creator can set the current book"
+        )
+    
+    # Verify book exists
+    book = db.query(Book).filter(Book.id == book_id).first()
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+    
+    group.current_book_id = book_id
+    db.commit()
+    db.refresh(group)
+    return group
 
