@@ -10,18 +10,49 @@ from app.database import get_db
 from app.models import User
 from app.schemas import TokenData
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Configure password context with bcrypt
+# Using bcrypt with rounds=12 for better security
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its hash"""
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        return pwd_context.verify(plain_password, hashed_password)
+    except Exception:
+        # Fallback: try with direct bcrypt if passlib fails
+        try:
+            import bcrypt
+            password_bytes = plain_password.encode('utf-8')
+            if len(password_bytes) > 72:
+                password_bytes = password_bytes[:72]
+            return bcrypt.checkpw(password_bytes, hashed_password.encode('utf-8'))
+        except Exception:
+            return False
 
 
 def get_password_hash(password: str) -> str:
-    """Hash a password"""
-    return pwd_context.hash(password)
+    """Hash a password using bcrypt"""
+    try:
+        # Ensure password is a string and handle encoding
+        if not isinstance(password, str):
+            password = str(password)
+        
+        # Bcrypt has a 72 byte limit, truncate if necessary
+        password_bytes = password.encode('utf-8')
+        if len(password_bytes) > 72:
+            password = password_bytes[:72].decode('utf-8', errors='ignore')
+        
+        return pwd_context.hash(password)
+    except Exception as e:
+        # Fallback: try with direct bcrypt if passlib fails
+        import bcrypt
+        password_bytes = password.encode('utf-8')
+        if len(password_bytes) > 72:
+            password_bytes = password_bytes[:72]
+        salt = bcrypt.gensalt(rounds=12)
+        return bcrypt.hashpw(password_bytes, salt).decode('utf-8')
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
