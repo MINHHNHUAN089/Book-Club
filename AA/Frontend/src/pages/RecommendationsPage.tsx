@@ -1,72 +1,14 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
 import { Book, Challenge } from "../types";
 
 interface RecommendationsPageProps {
   books: Book[];
+  allBooks?: Book[];
   onAddBook?: (book: Book) => void;
 }
 
-// Mock popular books data
-const popularBooks: Book[] = [
-  {
-    id: "pop-1",
-    title: "Dune",
-    author: "Frank Herbert",
-    coverUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuBaKXtccuGI2QLj_teTVBP9J1ze6Zukw4tqPI71WwUPR6L1KayUsUedTtmmDAqz3MD0Z5_rA7-wsIdEFSrlVx_bLLopPuz5I4CXrZgR4aD7PS_bjP8F-HhlUdh9Nh9kgEFKFkuxyu3E14kJxI4Qv1VN_t2ZYzfo-XoeSg_3e078MWyVJzjr1Ff-U3d3Ud5cCuh3ndKbdyNt0jBdSjgOCdNKWU4fxQXIscX-348iD6yARKuKiATkDOLtUhzkaT9cruO_qTSjCuoj4eVt",
-    progress: 0,
-    rating: 0
-  },
-  {
-    id: "pop-2",
-    title: "Pride and Prejudice",
-    author: "Jane Austen",
-    coverUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuDmCkvupVpjhdiBGkOGKszGVaaSkmJg9IGQdEKKu__Tb-PBhL37YxtkiKxv8por837IQcnAxTwc_EaDR4bXUaIArM_isxz3b67mCmsAXa72FLpOVe-ah0FXx9da2idTkr7lD_ntXm4lzhG4TZR7gBVAU7e90ucdfKC54S9AB-k-fk2dEVUyOYgP9EBZbfzfPK2P4Gz4hI3f36V_FCeoJF7j5TxP7eK47TLV8jV_jpklNY4qXo9DsS-fQ76WlUZvkc6_8-NB36RAVEa_",
-    progress: 0,
-    rating: 0
-  },
-  {
-    id: "pop-3",
-    title: "Steve Jobs",
-    author: "Walter Isaacson",
-    coverUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuBiPWYX6Qs8HIL3ZfiIwRYf7o5soK8rdt6yQIzq9ZAuYZGeSe2AkSLaPM35F7wxgoenDJWGMrUI-38gKDrJxx2wvyFVg4SoS0P7QJ3T1oRrsJcTikg_NcA-6WFqEKLhfDFq3RIQls1aB6l-Nm7wZ_xkmqXne9KyIbzArLnlXgtMtWahKIXvGqrTqCmpaxdt7P9fSlMHBzgAT3KrJIgzCDJDcEOJI28ppng9ZZ4Ds-NE4I2dSimxhHraKLbHgbMqgy-V0rv-0zxbu6dq",
-    progress: 0,
-    rating: 0
-  },
-  {
-    id: "pop-4",
-    title: "Atomic Habits",
-    author: "James Clear",
-    coverUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuChp3cJH5XEGtPpk4S0sLQ3uLEeF-CJM3e-psXK_HH4lRv8eA-LYFhbYFaVZwM6gQAFyTRKJF440jM1goMBfN0996bphBVPTOpmJc6JY_RhDePqGvP6Kz6hevaM9jsC6zBbF9yYd4hIsY_vyTPQE_IWCGbgFNgwOx9uvKseZ0tPrfxmEJMPOnoWVAymB4H0ZHmKM-cLwPqZOe98LBLp9k7CPzPhUxBM0pyR4xdQok5nZ-H6Nu_BK7zcgcbHOBPNOO0ewV1zsOBM6jS4",
-    progress: 0,
-    rating: 0
-  },
-  {
-    id: "pop-5",
-    title: "The Shining",
-    author: "Stephen King",
-    coverUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuCVUvrpcHiK3pSnI2UI5f-y53X0rNMXpsTUodRgW5URiyIxfmn20-MEdqBdSCVykQbweZ8TWylOczbMFOzD2Y5Q-wFAO1pXuoJfsS8bcxBnHihocRIvC4xAVJUgtXdceqSs4fAZ-hQyHuFNVvEWP_8aImOrl8YOqPeEIVTRw1Pam2qqPt2kN0xp98IuRWFai_A8ju65Wzsyv9PE0zTRG6vUL1GCnhfnnHzj-HO1ETpD4oobiD1iFFTV7Y7NgD8piLxDcZIxij93WSvW",
-    progress: 0,
-    rating: 0
-  },
-  {
-    id: "pop-6",
-    title: "Naruto",
-    author: "Masashi Kishimoto",
-    coverUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuAw5Z9IrkowvMXuLfLh_fIvtYPqD8f_fRivz4WZeBjU7b5Wbu9WC0-5vlt6Ahs8PgJffChwAa3HxSm8xAbI_aW2XvQYdNBIkDfrQUp99xgj3FiQmbEcFEMeVNdlFHv6i0l8CcH08ijp8U9jtZVROSRQkyD8l0fsniqxc0xLFzrR2xR19dsQRDr5vY-C7HHvuPdqXDdBmU4wLUAa61LvVEd_87CGLlSwZYdeq8z-sAfnNLicJ4mSRhY8W_gwRoeTO7s04fxuZKv4RunP",
-    progress: 0,
-    rating: 0
-  },
-  {
-    id: "pop-7",
-    title: "Sapiens",
-    author: "Yuval Noah Harari",
-    coverUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuDOiiBcmkgJwxHXy9aDblYPnzUqrkKnw3trfFdt72tq06gk3S2FIm8Mn8u_QvqnaFsSpnHJLecGTPRQmGhs-C7ql5E6KwvD5Q4fVgFvqHFzE_x8oGf3zFhJ3S2yaqTlInh8RK1D8dPejnzwk2IwI7X9DLOe4UqFRJTqE2Hr_nwg7NvCnFoAl36G0nKOgRRYS-i7eTItJH68eoEAfpIDFbDFWXWrgWFtHAaAkzKlmyc2iBVE1sIt1iSQCUQhOTlG1U4Bh_wjaj6GSEds",
-    progress: 0,
-    rating: 0
-  }
-];
 
 // Enhanced challenges data
 const enhancedChallenges: Challenge[] = [
@@ -93,9 +35,25 @@ const enhancedChallenges: Challenge[] = [
   }
 ];
 
-const RecommendationsPage = ({ books, onAddBook }: RecommendationsPageProps) => {
+const RecommendationsPage = ({ books, allBooks = [], onAddBook }: RecommendationsPageProps) => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Lấy 10 cuốn đầu tiên từ allBooks cho "Sách thịnh hành"
+  const popularBooks = useMemo(() => {
+    return allBooks.slice(0, 10);
+  }, [allBooks]);
+
+  // Lọc sách gợi ý theo search query
+  const filteredRecommendations = useMemo(() => {
+    if (!searchQuery.trim()) return books;
+    const query = searchQuery.toLowerCase();
+    return books.filter(
+      (book) =>
+        book.title.toLowerCase().includes(query) ||
+        book.author.toLowerCase().includes(query)
+    );
+  }, [books, searchQuery]);
 
   const handleAddBook = (book: Book) => {
     if (onAddBook) {
@@ -126,14 +84,41 @@ const RecommendationsPage = ({ books, onAddBook }: RecommendationsPageProps) => 
         </div>
       </header>
 
+      <section className="dark-controls">
+        <div className="search">
+          <span className="search-icon">🔍</span>
+          <input
+            className="search-input"
+            placeholder="Tìm kiếm sách gợi ý..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+      </section>
+
       <main className="dark-page-content" style={{ padding: "24px 16px" }}>
         {/* Section 1: Recommended for you */}
         <section className="discover-section">
           <h2 className="discover-section-title">Gợi ý cho bạn</h2>
           <div className="discover-scroll-container">
             <div className="discover-scroll-content">
-              {books.map((book) => (
-                <div key={book.id} className="discover-recommend-card">
+              {filteredRecommendations.length === 0 ? (
+                <div style={{
+                  textAlign: "center",
+                  padding: "40px 20px",
+                  color: "#94a3b8",
+                  width: "100%"
+                }}>
+                  <p>Không tìm thấy sách nào phù hợp với từ khóa "{searchQuery}"</p>
+                </div>
+              ) : (
+                filteredRecommendations.map((book) => (
+                <div 
+                  key={book.id} 
+                  className="discover-recommend-card"
+                  onClick={() => navigate(`/review?bookId=${book.id}`)}
+                  style={{ cursor: "pointer" }}
+                >
                   <div
                     className="discover-book-cover-large"
                     style={{ backgroundImage: `url(${book.coverUrl || "https://via.placeholder.com/240x320"})` }}
@@ -145,13 +130,17 @@ const RecommendationsPage = ({ books, onAddBook }: RecommendationsPageProps) => 
                     </div>
                     <button
                       className="discover-add-btn"
-                      onClick={() => handleAddBook(book)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddBook(book);
+                      }}
                     >
                       Add to list
                     </button>
                   </div>
                 </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </section>
@@ -162,7 +151,12 @@ const RecommendationsPage = ({ books, onAddBook }: RecommendationsPageProps) => 
           <div className="discover-scroll-container">
             <div className="discover-scroll-content">
               {popularBooks.map((book) => (
-                <div key={book.id} className="discover-popular-card">
+                <div 
+                  key={book.id} 
+                  className="discover-popular-card"
+                  onClick={() => navigate(`/review?bookId=${book.id}`)}
+                  style={{ cursor: "pointer" }}
+                >
                   <div
                     className="discover-book-cover-small"
                     style={{ backgroundImage: `url(${book.coverUrl || "https://via.placeholder.com/160x213"})` }}

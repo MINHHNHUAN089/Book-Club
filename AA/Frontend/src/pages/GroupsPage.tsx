@@ -21,10 +21,10 @@ const GroupsPage = ({ groups }: GroupsPageProps) => {
 
   const sortedGroups = [...filteredGroups].sort((a, b) => {
     if (sortBy === "members") {
-      return (b.member_count || 0) - (a.member_count || 0);
+      return (b.members_count || 0) - (a.members_count || 0);
     }
-    // For activity and date, just use member_count as placeholder
-    return (b.member_count || 0) - (a.member_count || 0);
+    // For activity and date, just use members_count as placeholder
+    return (b.members_count || 0) - (a.members_count || 0);
   });
 
   return (
@@ -106,11 +106,11 @@ const GroupsPage = ({ groups }: GroupsPageProps) => {
             <div className="groups-club-content">
               <p className="groups-club-name">{group.name}</p>
               {group.current_book && (
-                <p className="groups-club-book">Sách đang đọc: {group.current_book}</p>
+                <p className="groups-club-book">Sách đang đọc: {typeof group.current_book === 'object' ? group.current_book.title : group.current_book}</p>
               )}
               <div className="groups-club-members">
                 <span className="groups-club-icon">👥</span>
-                <span>{group.member_count || 0} thành viên</span>
+                <span>{group.members_count || 0} thành viên</span>
               </div>
               <button
                 className="groups-club-join-btn"

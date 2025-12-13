@@ -13,9 +13,36 @@ const ChallengesPage = ({ challenges }: ChallengesPageProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"all" | "active" | "not_joined" | "completed">("all");
 
+  // Tính status cho mỗi challenge dựa trên thời gian
+  const challengesWithStatus = useMemo(() => {
+    const now = new Date();
+    return challenges.map((challenge) => {
+      const startDate = new Date(challenge.start_date);
+      const endDate = new Date(challenge.end_date);
+      
+      let status: "active" | "not_joined" | "completed" = "not_joined";
+      
+      // Nếu challenge đã có status từ API, dùng nó
+      if (challenge.status) {
+        status = challenge.status;
+      } else {
+        // Tính status dựa trên thời gian
+        if (now < startDate) {
+          status = "not_joined"; // Chưa bắt đầu
+        } else if (now >= startDate && now <= endDate) {
+          status = "active"; // Đang diễn ra
+        } else {
+          status = "completed"; // Đã kết thúc
+        }
+      }
+      
+      return { ...challenge, status };
+    });
+  }, [challenges]);
+
   const filteredChallenges = useMemo(() => {
-    let filtered = challenges.filter((challenge) =>
-      challenge.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    let filtered = challengesWithStatus.filter((challenge) =>
+      challenge.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (challenge.description || "").toLowerCase().includes(searchQuery.toLowerCase())
     );
 
@@ -28,7 +55,7 @@ const ChallengesPage = ({ challenges }: ChallengesPageProps) => {
     }
 
     return filtered;
-  }, [challenges, searchQuery, activeTab]);
+  }, [challengesWithStatus, searchQuery, activeTab]);
 
   const formatNumber = (num?: number) => {
     if (!num) return "0";
@@ -157,9 +184,9 @@ const ChallengesPage = ({ challenges }: ChallengesPageProps) => {
                 {/* Card Content */}
                 <div className="challenges-content">
                   <div className="challenges-header-row">
-                    <p className="challenges-name">{challenge.name}</p>
+                    <p className="challenges-name">{challenge.title}</p>
                   </div>
-                  <p className="challenges-description">{challenge.description || `Đọc ${challenge.target_count} cuốn sách`}</p>
+                  <p className="challenges-description">{challenge.description || `Đọc ${challenge.target_books} cuốn sách`}</p>
 
                   {/* Tags for not joined - API doesn't provide tags yet */}
                   {challenge.status === "not_joined" && (
@@ -178,7 +205,7 @@ const ChallengesPage = ({ challenges }: ChallengesPageProps) => {
                         <span
                           className={`challenges-progress-count ${challenge.status === "completed" ? "completed" : ""}`}
                         >
-                          0/{challenge.target_count} cuốn
+                          0/{challenge.target_books} cuốn
                         </span>
                       </div>
                       <div className="challenges-progress-bar">

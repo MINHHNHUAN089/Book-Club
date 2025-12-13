@@ -189,11 +189,16 @@ const App = () => {
     try {
       await createReview(parseInt(bookId), rating, review);
       // Reload books to get updated review
-      const updatedBooks = await getMyBooks();
-      setUserBooks(updatedBooks);
+      try {
+        const updatedBooks = await getMyBooks();
+        setUserBooks(updatedBooks);
+      } catch (reloadErr) {
+        console.error("Error reloading books:", reloadErr);
+        // Don't throw, just log - review was saved successfully
+      }
     } catch (err) {
       console.error("Error saving review:", err);
-      alert(err instanceof Error ? err.message : "Không thể lưu đánh giá");
+      throw err; // Re-throw để ReviewForm có thể xử lý
     }
   };
 
@@ -286,12 +291,26 @@ const App = () => {
                 <ProtectedRoute>
                   <ReviewPage
                     books={books}
+                    allBooks={allBooks}
+                    userBooks={userBooks
+                      .filter(ub => ub && ub.id != null && ub.book_id != null)
+                      .map(ub => ({ id: ub.id, book_id: ub.book_id, progress: ub.progress || 0 }))}
                     selectedBook={selectedBook}
                     onSelectBook={(book) => {
                       const bookId = book.id;
                       // Update selectedBookId logic if needed
                     }}
                     onSaveReview={handleReviewSave}
+                    onBookAdded={async () => {
+                      // Reload user books after adding
+                      const updatedBooks = await getMyBooks();
+                      setUserBooks(updatedBooks);
+                    }}
+                    onProgressUpdated={async () => {
+                      // Reload user books after updating progress
+                      const updatedBooks = await getMyBooks();
+                      setUserBooks(updatedBooks);
+                    }}
                   />
                 </ProtectedRoute>
               }
@@ -300,7 +319,7 @@ const App = () => {
               path="/recommendations"
               element={
                 <ProtectedRoute>
-                  <RecommendationsPage books={recommendations} onAddBook={handleAddBookFromRecommendations} />
+                  <RecommendationsPage books={recommendations} allBooks={allBooks} onAddBook={handleAddBookFromRecommendations} />
                 </ProtectedRoute>
               }
             />

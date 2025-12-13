@@ -273,9 +273,11 @@ export interface Group {
   id: number;
   name: string;
   description?: string;
+  topic?: string;
   cover_url?: string;
-  current_book?: string;
-  member_count?: number;
+  current_book?: { id: number; title: string } | null;
+  members_count?: number;
+  created_at?: string;
 }
 
 export async function getGroups(): Promise<Group[]> {
@@ -309,12 +311,15 @@ export async function joinGroup(groupId: number): Promise<void> {
 
 export interface Challenge {
   id: number;
-  name: string;
+  title: string; // Backend uses 'title', not 'name'
   description?: string;
-  target_count: number;
+  target_books: number; // Backend uses 'target_books', not 'target_count'
   start_date: string;
   end_date: string;
   cover_url?: string;
+  xp_reward?: number;
+  badge?: string;
+  tags?: string;
   status?: "active" | "not_joined" | "completed";
 }
 

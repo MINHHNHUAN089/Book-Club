@@ -120,14 +120,6 @@ const AuthorsPage = ({ authors }: AuthorsPageProps) => {
             <div key={author.id} className="authors-card">
               {/* Author Header */}
               <div className="authors-card-header">
-                <div className="authors-avatar-wrapper">
-                  <div
-                    className="authors-avatar-img"
-                    style={{
-                      backgroundImage: `url(${author.avatar_url || "https://via.placeholder.com/64"})`
-                    }}
-                  />
-                </div>
                 <div className="authors-info">
                   <div className="authors-name-row">
                     <h3 className="authors-name">{author.name}</h3>
