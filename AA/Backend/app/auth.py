@@ -18,22 +18,36 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its hash"""
+    if not plain_password or not hashed_password:
+        return False
+    
     try:
+        # Try with passlib first (most common case)
         return pwd_context.verify(plain_password, hashed_password)
-    except Exception:
+    except Exception as e:
         # Fallback: try with direct bcrypt if passlib fails
         try:
             import bcrypt
             password_bytes = plain_password.encode('utf-8')
             if len(password_bytes) > 72:
                 password_bytes = password_bytes[:72]
-            return bcrypt.checkpw(password_bytes, hashed_password.encode('utf-8'))
+            
+            # hashed_password might already be a string, check if it needs encoding
+            if isinstance(hashed_password, str):
+                hash_bytes = hashed_password.encode('utf-8')
+            else:
+                hash_bytes = hashed_password
+            
+            return bcrypt.checkpw(password_bytes, hash_bytes)
         except Exception:
             return False
 
 
 def get_password_hash(password: str) -> str:
     """Hash a password using bcrypt"""
+    if not password:
+        raise ValueError("Password cannot be empty")
+    
     try:
         # Ensure password is a string and handle encoding
         if not isinstance(password, str):
@@ -52,7 +66,11 @@ def get_password_hash(password: str) -> str:
         if len(password_bytes) > 72:
             password_bytes = password_bytes[:72]
         salt = bcrypt.gensalt(rounds=12)
-        return bcrypt.hashpw(password_bytes, salt).decode('utf-8')
+        hashed = bcrypt.hashpw(password_bytes, salt)
+        # Ensure we return a string
+        if isinstance(hashed, bytes):
+            return hashed.decode('utf-8')
+        return hashed
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
