@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_, func, desc
 from app.database import get_db
 from app.models import Book, Author, UserBook, User, Review
-from app.schemas import BookCreate, BookResponse, UserBookCreate, UserBookResponse, UserBookUpdate, BookStatistics, ReviewResponse
+from app.schemas import BookCreate, BookUpdate, BookResponse, UserBookCreate, UserBookResponse, UserBookUpdate, BookStatistics, ReviewResponse
 from app.auth import get_current_active_user
 
 router = APIRouter(prefix="/api/books", tags=["books"])
@@ -38,9 +38,32 @@ def get_books(
 @router.get("/{book_id}", response_model=BookResponse)
 def get_book(book_id: int, db: Session = Depends(get_db)):
     """Get a specific book by ID"""
-    book = db.query(Book).filter(Book.id == book_id).first()
+    from sqlalchemy.orm import joinedload
+    book = db.query(Book).options(joinedload(Book.authors)).filter(Book.id == book_id).first()
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
+    return book
+
+
+@router.patch("/{book_id}", response_model=BookResponse)
+def update_book(
+    book_id: int,
+    book_data: BookUpdate,
+    db: Session = Depends(get_db)
+):
+    """Update a book (e.g., cover_url)"""
+    from sqlalchemy.orm import joinedload
+    book = db.query(Book).options(joinedload(Book.authors)).filter(Book.id == book_id).first()
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+    
+    # Update only provided fields
+    update_data = book_data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(book, field, value)
+    
+    db.commit()
+    db.refresh(book)
     return book
 
 

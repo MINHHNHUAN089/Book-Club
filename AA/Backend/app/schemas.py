@@ -81,6 +81,16 @@ class BookCreate(BookBase):
     author_names: Optional[List[str]] = []
 
 
+class BookUpdate(BaseModel):
+    title: Optional[str] = None
+    isbn: Optional[str] = None
+    cover_url: Optional[str] = None
+    description: Optional[str] = None
+    published_date: Optional[str] = None
+    page_count: Optional[int] = None
+    google_books_id: Optional[str] = None
+
+
 class BookResponse(BookBase):
     id: int
     authors: List[AuthorResponse] = []
