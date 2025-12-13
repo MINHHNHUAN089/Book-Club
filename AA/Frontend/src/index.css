@@ -2821,3 +2821,292 @@ a {
   font-size: 16px;
 }
 
+/* ============================================
+   USER PAGE STYLES
+   ============================================ */
+
+.user-page-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 16px;
+}
+
+.user-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 32px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.user-avatar-large {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #13a4ec, #7c3aed);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+
+.user-info {
+  flex: 1;
+}
+
+.user-name {
+  font-size: 32px;
+  font-weight: 700;
+  color: white;
+  margin: 0 0 8px;
+  letter-spacing: -0.02em;
+}
+
+.user-email {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+}
+
+.user-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 32px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.user-tab {
+  padding: 12px 24px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: "Lexend", sans-serif;
+}
+
+.user-tab:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.user-tab.active {
+  color: #13a4ec;
+  border-bottom-color: #13a4ec;
+}
+
+.user-tab-content {
+  min-height: 400px;
+}
+
+/* Overview Tab */
+.user-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.user-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.user-stat-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.2s;
+}
+
+.user-stat-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-2px);
+}
+
+.user-stat-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+
+.user-stat-value {
+  font-size: 36px;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 8px;
+  font-family: "Lexend", sans-serif;
+}
+
+.user-stat-label {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+}
+
+.user-progress-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.user-progress-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+  margin: 0 0 16px;
+  font-family: "Lexend", sans-serif;
+}
+
+.user-progress-bar {
+  width: 100%;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.user-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #13a4ec, #7c3aed);
+  border-radius: 6px;
+  transition: width 0.3s ease;
+}
+
+.user-progress-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+  text-align: right;
+}
+
+/* Books Tab */
+.user-books {
+  min-height: 400px;
+}
+
+.user-empty-state {
+  text-align: center;
+  padding: 80px 20px;
+  color: #94a3b8;
+}
+
+/* Settings Tab */
+.user-settings {
+  max-width: 600px;
+}
+
+.user-settings-section {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.user-settings-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: white;
+  margin: 0 0 24px;
+  font-family: "Lexend", sans-serif;
+}
+
+.user-settings-item {
+  margin-bottom: 20px;
+}
+
+.user-settings-item:last-child {
+  margin-bottom: 0;
+}
+
+.user-settings-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 8px;
+}
+
+.user-settings-input {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: white;
+  font-size: 16px;
+  font-family: "Lexend", sans-serif;
+}
+
+.user-settings-input:focus {
+  outline: none;
+  border-color: #13a4ec;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.user-settings-input:read-only {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.user-logout-btn {
+  width: 100%;
+  padding: 14px 24px;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  color: #fca5a5;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: "Lexend", sans-serif;
+}
+
+.user-logout-btn:hover {
+  background: rgba(239, 68, 68, 0.3);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+}
+
+@media (max-width: 640px) {
+  .user-profile-header {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .user-avatar-large {
+    width: 100px;
+    height: 100px;
+    font-size: 40px;
+  }
+
+  .user-name {
+    font-size: 24px;
+  }
+
+  .user-tabs {
+    flex-wrap: wrap;
+  }
+
+  .user-tab {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+
+  .user-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+

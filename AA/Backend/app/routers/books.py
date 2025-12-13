@@ -1,11 +1,10 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, func, desc
 from app.database import get_db
 from app.models import Book, Author, UserBook, User, Review
 from app.schemas import BookCreate, BookResponse, UserBookCreate, UserBookResponse, UserBookUpdate, BookStatistics, ReviewResponse
-from sqlalchemy import func, desc
 from app.auth import get_current_active_user
 
 router = APIRouter(prefix="/api/books", tags=["books"])
@@ -88,7 +87,9 @@ def get_my_books(
     if status_filter:
         query = query.filter(UserBook.status == status_filter)
     
-    user_books = query.all()
+    # Eager load book and authors to avoid N+1 queries
+    from sqlalchemy.orm import joinedload
+    user_books = query.options(joinedload(UserBook.book).joinedload(Book.authors)).all()
     return user_books
 
 

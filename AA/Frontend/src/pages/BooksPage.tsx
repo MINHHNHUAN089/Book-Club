@@ -18,7 +18,7 @@ const BooksPage = ({ books, onUpdateProgress }: BooksPageProps) => {
 
   const filteredBooks = useMemo(() => {
     const normalize = (s: string) => s.toLowerCase();
-    return books.filter((b) => {
+    const filtered = books.filter((b) => {
       const matchesSearch =
         !search.trim() ||
         normalize(b.title).includes(normalize(search)) ||
@@ -31,6 +31,9 @@ const BooksPage = ({ books, onUpdateProgress }: BooksPageProps) => {
       if (filter === "finished") return b.progress >= 100;
       return b.progress > 0 && b.progress < 100;
     });
+    
+    console.log(`BooksPage: Total books: ${books.length}, Filtered: ${filtered.length}, Filter: ${filter}, Search: "${search}"`);
+    return filtered;
   }, [books, filter, search]);
 
   return (
@@ -46,8 +49,21 @@ const BooksPage = ({ books, onUpdateProgress }: BooksPageProps) => {
           <Navigation />
         </div>
         <div className="header-actions">
-          <button className="primary-btn">+ Thêm sách</button>
-          <div className="avatar" aria-label="User avatar" />
+          <button 
+            className="primary-btn"
+            onClick={() => {
+              console.log("Add book button clicked");
+              navigate("/discover");
+            }}
+          >
+            + Thêm sách
+          </button>
+          <div 
+            className="avatar" 
+            aria-label="User avatar"
+            onClick={() => navigate("/user")}
+            style={{ cursor: "pointer" }}
+          />
         </div>
       </header>
 

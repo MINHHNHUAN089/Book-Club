@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { register } from "../api/backend";
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -26,13 +27,15 @@ const RegisterPage = () => {
 
     setLoading(true);
 
-    // TODO: Gọi API đăng ký
-    // Tạm thời chỉ simulate
-    setTimeout(() => {
-      setLoading(false);
-      // Sau khi đăng ký thành công, chuyển đến trang đăng nhập hoặc trang chủ
+    try {
+      await register({ name, email, password });
+      // Sau khi đăng ký thành công, chuyển đến trang chủ
       navigate("/books");
-    }, 1000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Đăng ký thất bại");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

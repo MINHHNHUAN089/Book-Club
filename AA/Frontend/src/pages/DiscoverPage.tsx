@@ -1,4 +1,5 @@
 import { FormEvent, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
 import { searchBooks, GoogleVolume } from "../api/googleBooks";
 
@@ -7,6 +8,7 @@ interface DiscoverPageProps {
 }
 
 const DiscoverPage = ({ onImport }: DiscoverPageProps) => {
+  const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<GoogleVolume[]>([]);
   const [loading, setLoading] = useState(false);
@@ -40,7 +42,12 @@ const DiscoverPage = ({ onImport }: DiscoverPageProps) => {
         </div>
         <div className="header-actions">
           <button className="primary-btn">+ Thêm sách</button>
-          <div className="avatar" aria-label="User avatar" />
+          <div 
+            className="avatar" 
+            aria-label="User avatar"
+            onClick={() => navigate("/user")}
+            style={{ cursor: "pointer" }}
+          />
         </div>
       </header>
 

@@ -1,28 +1,25 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
-import { AuthorFollow } from "../types";
+import { Author } from "../api/backend";
+import { followAuthor } from "../api/backend";
 
 interface AuthorsPageProps {
-  authors: AuthorFollow[];
+  authors: Author[];
 }
 
 const AuthorsPage = ({ authors }: AuthorsPageProps) => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"all" | "new_books" | "recent">("all");
 
   const filteredAuthors = useMemo(() => {
     let filtered = authors.filter(
       (author) =>
-        author.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        author.genres.some((g) => g.toLowerCase().includes(searchQuery.toLowerCase()))
+        author.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    if (activeTab === "new_books") {
-      filtered = filtered.filter((author) => author.activity === "new_book" || author.activity === "upcoming");
-    } else if (activeTab === "recent") {
-      filtered = filtered.filter((author) => author.activity !== "none");
-    }
-
+    // Note: API Author doesn't have activity field, so we'll show all for now
     return filtered;
   }, [authors, searchQuery, activeTab]);
 
@@ -48,7 +45,12 @@ const AuthorsPage = ({ authors }: AuthorsPageProps) => {
         </div>
         <div className="header-actions">
           <button className="primary-btn">+ Thêm sách</button>
-          <div className="avatar" aria-label="User avatar" />
+          <div 
+            className="avatar" 
+            aria-label="User avatar"
+            onClick={() => navigate("/user")}
+            style={{ cursor: "pointer" }}
+          />
         </div>
       </header>
 
@@ -98,8 +100,23 @@ const AuthorsPage = ({ authors }: AuthorsPageProps) => {
         </div>
 
         {/* Authors Grid */}
-        <div className="authors-grid">
-          {filteredAuthors.map((author) => (
+        {filteredAuthors.length === 0 ? (
+          <div style={{
+            textAlign: "center",
+            padding: "80px 20px",
+            color: "#94a3b8"
+          }}>
+            <div style={{ fontSize: "64px", marginBottom: "24px" }}>✍️</div>
+            <h3 style={{ color: "#e2e8f0", fontSize: "24px", fontWeight: 700, margin: "0 0 12px" }}>
+              Chưa có tác giả nào
+            </h3>
+            <p style={{ fontSize: "16px", margin: "0 0 32px", maxWidth: "400px", marginLeft: "auto", marginRight: "auto" }}>
+              Theo dõi các tác giả yêu thích để nhận cập nhật về sách mới
+            </p>
+          </div>
+        ) : (
+          <div className="authors-grid">
+            {filteredAuthors.map((author) => (
             <div key={author.id} className="authors-card">
               {/* Author Header */}
               <div className="authors-card-header">
@@ -107,110 +124,41 @@ const AuthorsPage = ({ authors }: AuthorsPageProps) => {
                   <div
                     className="authors-avatar-img"
                     style={{
-                      backgroundImage: `url(${author.avatarUrl || "https://via.placeholder.com/64"})`
+                      backgroundImage: `url(${author.avatar_url || "https://via.placeholder.com/64"})`
                     }}
                   />
-                  {(author.activity === "new_book" || author.activity === "discussion") && (
-                    <div className="authors-online-indicator" />
-                  )}
                 </div>
                 <div className="authors-info">
                   <div className="authors-name-row">
                     <h3 className="authors-name">{author.name}</h3>
-                    <button className="authors-notification-btn">
-                      {author.notificationEnabled ? "🔔" : "🔕"}
-                    </button>
                   </div>
-                  <p className="authors-followers">{formatFollowers(author.followers)} người theo dõi</p>
+                  <p className="authors-followers">{author.bio || "Chưa có mô tả"}</p>
                 </div>
               </div>
 
               {/* Activity Section */}
               <div className="authors-activity">
-                {author.activity === "new_book" && author.activityContent && (
-                  <div className="authors-activity-book">
-                    <div
-                      className="authors-book-cover"
-                      style={{
-                        backgroundImage: `url(${author.activityContent.bookCover || "https://via.placeholder.com/48x64"})`
-                      }}
-                    />
-                    <div className="authors-book-info">
-                      <div className="authors-activity-badge new">Mới ra mắt</div>
-                      <p className="authors-book-title">{author.activityContent.title}</p>
-                      <p className="authors-book-desc">{author.activityContent.description}</p>
-                      <p className="authors-activity-time">{author.activityContent.time}</p>
-                    </div>
-                  </div>
-                )}
-
-                {author.activity === "discussion" && author.activityContent && (
-                  <div className="authors-activity-discussion">
-                    <div className="authors-discussion-header">
-                      <span className="authors-discussion-icon">💬</span>
-                      <span className="authors-discussion-label">Thảo luận mới</span>
-                      <span className="authors-activity-time">{author.activityContent.time}</span>
-                    </div>
-                    <p className="authors-discussion-text">{author.activityContent.description}</p>
-                    <div className="authors-activity-stats">
-                      <span>❤️ {formatFollowers(author.activityContent.likes)}</span>
-                      <span>💬 {formatFollowers(author.activityContent.comments)}</span>
-                    </div>
-                    <button className="authors-join-btn">Tham gia</button>
-                  </div>
-                )}
-
-                {author.activity === "upcoming" && author.activityContent && (
-                  <div className="authors-activity-book">
-                    <div className="authors-book-info">
-                      <div className="authors-activity-badge upcoming">Sắp phát hành</div>
-                      <p className="authors-book-title">{author.activityContent.title}</p>
-                      <p className="authors-book-desc">{author.activityContent.description}</p>
-                    </div>
-                    <button className="authors-preorder-btn">
-                      <span>📖</span>
-                      Đặt trước
-                    </button>
-                  </div>
-                )}
-
-                {author.activity === "award" && author.activityContent && (
-                  <div className="authors-activity-discussion">
-                    <div className="authors-discussion-header">
-                      <span className="authors-discussion-icon">🏆</span>
-                      <span className="authors-discussion-label">Giải thưởng</span>
-                      <span className="authors-activity-time">{author.activityContent.time}</span>
-                    </div>
-                    <p className="authors-discussion-text">{author.activityContent.description}</p>
-                    <div className="authors-activity-stats">
-                      <span>❤️ {formatFollowers(author.activityContent.likes)}</span>
-                      <span>🔗 {formatFollowers(author.activityContent.shares)}</span>
-                    </div>
-                  </div>
-                )}
-
-                {author.activity === "none" && (
-                  <div className="authors-activity-empty">
-                    Chưa có cập nhật mới trong tuần này
-                  </div>
-                )}
+                <div className="authors-activity-empty">
+                  {author.bio || "Chưa có thông tin hoạt động"}
+                </div>
               </div>
 
               {/* Card Footer */}
               <div className="authors-card-footer">
-                {author.activity === "new_book" && (
-                  <>
-                    <div className="authors-avatars-stack">
-                      <div className="authors-avatar-small">JD</div>
-                      <div className="authors-avatar-small">AL</div>
-                      <div className="authors-avatar-small">+5</div>
-                    </div>
-                    <button className="authors-detail-btn">Xem chi tiết</button>
-                  </>
-                )}
-                {author.activity === "none" && (
-                  <button className="authors-view-books-btn">Xem 12 sách đã xuất bản</button>
-                )}
+                <button
+                  className="authors-view-books-btn"
+                  onClick={async () => {
+                    try {
+                      await followAuthor(author.id);
+                      alert("Đã follow tác giả thành công!");
+                    } catch (err) {
+                      console.error("Error following author:", err);
+                      alert(err instanceof Error ? err.message : "Không thể follow tác giả");
+                    }
+                  }}
+                >
+                  Theo dõi
+                </button>
               </div>
             </div>
           ))}
@@ -225,6 +173,7 @@ const AuthorsPage = ({ authors }: AuthorsPageProps) => {
             <button className="authors-add-more-btn">Khám phá ngay</button>
           </div>
         </div>
+        )}
       </main>
     </div>
   );

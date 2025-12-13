@@ -13,10 +13,37 @@ const getStatus = (progress: number) => {
 };
 
 const BookList = ({ books, onUpdateProgress, onSelect }: BookListProps) => {
+  const handleSelect = (book: Book) => {
+    console.log("Book selected:", book);
+    try {
+      onSelect(book);
+    } catch (error) {
+      console.error("Error selecting book:", error);
+    }
+  };
+
+  if (books.length === 0) {
+    return (
+      <div style={{
+        textAlign: "center",
+        padding: "80px 20px",
+        color: "#94a3b8"
+      }}>
+        <div style={{ fontSize: "64px", marginBottom: "24px" }}>📚</div>
+        <h3 style={{ color: "#e2e8f0", fontSize: "24px", fontWeight: 700, margin: "0 0 12px" }}>
+          Chưa có sách nào
+        </h3>
+        <p style={{ fontSize: "16px", margin: "0 0 32px", maxWidth: "400px", marginLeft: "auto", marginRight: "auto" }}>
+          Bắt đầu bằng cách thêm sách đầu tiên vào danh sách của bạn
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="book-grid">
       {books.map((book) => (
-        <div className="book-card" key={book.id} onClick={() => onSelect(book)} style={{ cursor: "pointer" }}>
+        <div className="book-card" key={book.id} onClick={() => handleSelect(book)} style={{ cursor: "pointer" }}>
           <div
             className="book-cover"
             style={{ backgroundImage: `url(${book.coverUrl ?? "https://via.placeholder.com/240x320"})` }}
@@ -67,7 +94,8 @@ const BookList = ({ books, onUpdateProgress, onSelect }: BookListProps) => {
                 className="secondary-btn"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onSelect(book);
+                  console.log("Review button clicked for book:", book);
+                  handleSelect(book);
                 }}
               >
                 Review

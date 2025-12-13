@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
 import { Book, Challenge } from "../types";
 
@@ -93,6 +94,7 @@ const enhancedChallenges: Challenge[] = [
 ];
 
 const RecommendationsPage = ({ books, onAddBook }: RecommendationsPageProps) => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleAddBook = (book: Book) => {
@@ -115,7 +117,12 @@ const RecommendationsPage = ({ books, onAddBook }: RecommendationsPageProps) => 
         </div>
         <div className="header-actions">
           <button className="primary-btn">+ Thêm sách</button>
-          <div className="avatar" aria-label="User avatar" />
+          <div 
+            className="avatar" 
+            aria-label="User avatar"
+            onClick={() => navigate("/user")}
+            style={{ cursor: "pointer" }}
+          />
         </div>
       </header>
 

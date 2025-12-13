@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
 import ReviewForm from "../components/ReviewForm";
 import { Book } from "../types";
@@ -12,6 +12,7 @@ interface ReviewPageProps {
 }
 
 const ReviewPage = ({ books, selectedBook, onSelectBook, onSaveReview }: ReviewPageProps) => {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const bookIdFromUrl = searchParams.get("bookId");
 
@@ -46,7 +47,12 @@ const ReviewPage = ({ books, selectedBook, onSelectBook, onSaveReview }: ReviewP
         </div>
         <div className="header-actions">
           <button className="primary-btn">+ Thêm sách</button>
-          <div className="avatar" aria-label="User avatar" />
+          <div 
+            className="avatar" 
+            aria-label="User avatar"
+            onClick={() => navigate("/user")}
+            style={{ cursor: "pointer" }}
+          />
         </div>
       </header>
 

@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { login } from "../api/backend";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -13,13 +14,15 @@ const LoginPage = () => {
     setError(null);
     setLoading(true);
 
-    // TODO: Gọi API đăng nhập
-    // Tạm thời chỉ simulate
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await login({ email, password });
       // Sau khi đăng nhập thành công, chuyển đến trang chủ
       navigate("/books");
-    }, 1000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Đăng nhập thất bại");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
