@@ -3,18 +3,32 @@ Script để test kết nối database PostgreSQL
 Chạy: python test_connection.py
 """
 import sys
+import os
+from pathlib import Path
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import OperationalError
 
 def test_connection():
     try:
-        # Import settings
+        # Đảm bảo đọc .env từ đúng thư mục
+        backend_dir = Path(__file__).parent
+        env_file = backend_dir / ".env"
+        
+        if not env_file.exists():
+            print("[ERROR] .env file not found!")
+            print(f"Expected location: {env_file}")
+            print()
+            print("Please create .env file in Backend directory")
+            return False
+        
+        # Import settings (sau khi đảm bảo .env tồn tại)
         from app.config import settings
         
         print("=" * 50)
         print("Testing Database Connection...")
         print("=" * 50)
-        print(f"Database URL: {settings.DATABASE_URL.split('@')[1] if '@' in settings.DATABASE_URL else 'Hidden'}")
+        db_url_display = settings.DATABASE_URL.split('@')[1] if '@' in settings.DATABASE_URL else 'Hidden'
+        print(f"Database URL: {db_url_display}")
         print()
         
         # Create engine
@@ -25,7 +39,7 @@ def test_connection():
         with engine.connect() as connection:
             result = connection.execute(text("SELECT version();"))
             version = result.fetchone()[0]
-            print("✅ Connection successful!")
+            print("[OK] Connection successful!")
             print()
             print(f"PostgreSQL Version: {version}")
             print()
@@ -54,12 +68,12 @@ def test_connection():
             
             print()
             print("=" * 50)
-            print("✅ Database connection test PASSED!")
+            print("[OK] Database connection test PASSED!")
             print("=" * 50)
             return True
             
     except ImportError as e:
-        print("❌ Error importing settings:")
+        print("[ERROR] Error importing settings:")
         print(f"   {e}")
         print()
         print("Make sure you have:")
@@ -68,7 +82,7 @@ def test_connection():
         return False
         
     except OperationalError as e:
-        print("❌ Connection failed!")
+        print("[ERROR] Connection failed!")
         print()
         print("Error details:")
         print(f"   {e}")
@@ -81,8 +95,10 @@ def test_connection():
         return False
         
     except Exception as e:
-        print("❌ Unexpected error:")
+        print("[ERROR] Unexpected error:")
         print(f"   {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 if __name__ == "__main__":
