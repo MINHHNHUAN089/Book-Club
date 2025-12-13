@@ -2,7 +2,7 @@ import { Book } from "../types";
 
 interface BookListProps {
   books: Book[];
-  onUpdateProgress: (bookId: string, progress: number) => void;
+  onUpdateProgress?: (bookId: string, progress: number) => void;
   onSelect: (book: Book) => void;
 }
 
@@ -57,15 +57,17 @@ const BookList = ({ books, onUpdateProgress, onSelect }: BookListProps) => {
               <p className="book-author">{book.author}</p>
             </div>
 
-            <div className="book-progress">
-              <div className="book-progress-row">
-                <span>Tiến độ</span>
-                <span>{book.progress}%</span>
+            {onUpdateProgress && (
+              <div className="book-progress">
+                <div className="book-progress-row">
+                  <span>Tiến độ</span>
+                  <span>{book.progress}%</span>
+                </div>
+                <div className="book-progress-bar">
+                  <div className="book-progress-fill" style={{ width: `${book.progress}%` }} />
+                </div>
               </div>
-              <div className="book-progress-bar">
-                <div className="book-progress-fill" style={{ width: `${book.progress}%` }} />
-              </div>
-            </div>
+            )}
 
             <div className="book-rating">
               {Array.from({ length: 5 }).map((_, idx) => {
@@ -78,16 +80,17 @@ const BookList = ({ books, onUpdateProgress, onSelect }: BookListProps) => {
               })}
             </div>
 
-            <div className="book-status">{getStatus(book.progress)}</div>
+            {onUpdateProgress && <div className="book-status">{getStatus(book.progress)}</div>}
 
-            <div className="book-actions">
-              <input
-                className="range"
-                type="range"
-                min={0}
-                max={100}
-                value={book.progress}
-                onChange={(e) => onUpdateProgress(book.id, Number(e.target.value))}
+            {onUpdateProgress && (
+              <div className="book-actions">
+                <input
+                  className="range"
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={book.progress}
+                onChange={(e) => onUpdateProgress && onUpdateProgress(book.id, Number(e.target.value))}
                 onClick={(e) => e.stopPropagation()}
               />
               <button
@@ -100,7 +103,8 @@ const BookList = ({ books, onUpdateProgress, onSelect }: BookListProps) => {
               >
                 Review
               </button>
-            </div>
+              </div>
+            )}
           </div>
         </div>
       ))}

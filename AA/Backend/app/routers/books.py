@@ -18,6 +18,8 @@ def get_books(
     db: Session = Depends(get_db)
 ):
     """Get all books with optional search"""
+    from sqlalchemy.orm import joinedload
+    
     query = db.query(Book)
     
     if search:
@@ -28,7 +30,8 @@ def get_books(
             )
         )
     
-    books = query.offset(skip).limit(limit).all()
+    # Eager load authors to avoid N+1 queries
+    books = query.options(joinedload(Book.authors)).offset(skip).limit(limit).all()
     return books
 
 

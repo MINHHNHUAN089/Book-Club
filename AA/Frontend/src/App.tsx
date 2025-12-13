@@ -15,6 +15,7 @@ import UserPage from "./pages/UserPage";
 import { GoogleVolume } from "./api/googleBooks";
 import {
   getMyBooks,
+  getBooks,
   updateBookProgress,
   createBook,
   addBookToMyList,
@@ -50,6 +51,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 const App = () => {
   const [userBooks, setUserBooks] = useState<UserBook[]>([]);
+  const [allBooks, setAllBooks] = useState<Book[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [authors, setAuthors] = useState<Author[]>([]);
@@ -106,9 +108,13 @@ const App = () => {
         setLoading(true);
         setError(null);
 
-        const [booksData, groupsData, challengesData, authorsData] = await Promise.all([
+        const [booksData, allBooksData, groupsData, challengesData, authorsData] = await Promise.all([
           getMyBooks().catch((err) => {
             console.error("Error loading books:", err);
+            return [];
+          }),
+          getBooks().catch((err) => {
+            console.error("Error loading all books:", err);
             return [];
           }),
           getGroups().catch(() => []),
@@ -117,8 +123,27 @@ const App = () => {
         ]);
 
         console.log("Loaded books data:", booksData);
+        console.log("Loaded all books data:", allBooksData);
         console.log("Total books loaded:", booksData.length);
+        console.log("Total all books loaded:", allBooksData.length);
         setUserBooks(booksData);
+        
+        // Convert all books to Book format
+        const convertedAllBooks: Book[] = allBooksData.map((book: any) => {
+          const authorName = book.authors && book.authors.length > 0
+            ? book.authors.map((a: any) => a.name).join(", ")
+            : book.author || "Unknown";
+          
+          return {
+            id: book.id.toString(),
+            title: book.title,
+            author: authorName,
+            coverUrl: book.cover_url,
+            progress: 0, // All books don't have progress
+            rating: undefined,
+          };
+        });
+        setAllBooks(convertedAllBooks);
         setGroups(groupsData);
         setChallenges(challengesData);
         setAuthors(authorsData);
@@ -249,6 +274,7 @@ const App = () => {
                 <ProtectedRoute>
                   <BooksPage
                     books={books}
+                    allBooks={allBooks}
                     onUpdateProgress={handleUpdateProgress}
                   />
                 </ProtectedRoute>
