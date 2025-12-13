@@ -31,6 +31,8 @@ class PasswordChange(BaseModel):
 class UserResponse(UserBase):
     id: int
     avatar_url: Optional[str] = None
+    role: str = "user"
+    is_active: bool = True
     created_at: datetime
     
     class Config:

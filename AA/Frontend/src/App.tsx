@@ -12,6 +12,7 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import LandingPage from "./pages/LandingPage";
 import UserPage from "./pages/UserPage";
+import AdminPage from "./pages/AdminPage";
 import { GoogleVolume } from "./api/googleBooks";
 import {
   getMyBooks,
@@ -327,7 +328,13 @@ const App = () => {
               path="/groups"
               element={
                 <ProtectedRoute>
-                  <GroupsPage groups={groups} />
+                  <GroupsPage 
+                    groups={groups} 
+                    onGroupCreated={async () => {
+                      const updatedGroups = await getGroups();
+                      setGroups(updatedGroups);
+                    }}
+                  />
                 </ProtectedRoute>
               }
             />
@@ -360,6 +367,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <UserPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <AdminPage />
                 </ProtectedRoute>
               }
             />

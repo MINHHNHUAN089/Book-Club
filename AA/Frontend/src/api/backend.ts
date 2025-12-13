@@ -56,6 +56,8 @@ export interface User {
   id: number;
   name: string;
   email: string;
+  role?: string;
+  is_active?: boolean;
 }
 
 export async function register(data: RegisterData): Promise<AuthResponse> {
@@ -120,6 +122,37 @@ export function logout(): void {
 
 export function isAuthenticated(): boolean {
   return getToken() !== null;
+}
+
+export async function updateUser(data: { name?: string; email?: string }): Promise<User> {
+  const response = await fetch(`${API_BASE_URL}/auth/me`, {
+    method: "PATCH",
+    headers: getHeaders(true),
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể cập nhật thông tin");
+  }
+
+  return response.json();
+}
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
+    method: "POST",
+    headers: getHeaders(true),
+    body: JSON.stringify({
+      current_password: currentPassword,
+      new_password: newPassword,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể đổi mật khẩu");
+  }
 }
 
 // ============================================
@@ -293,6 +326,26 @@ export async function getGroups(): Promise<Group[]> {
   return response.json();
 }
 
+export async function createGroup(groupData: {
+  name: string;
+  description?: string;
+  topic?: string;
+  current_book_id?: number;
+}): Promise<Group> {
+  const response = await fetch(`${API_BASE_URL}/groups`, {
+    method: "POST",
+    headers: getHeaders(true),
+    body: JSON.stringify(groupData),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể tạo câu lạc bộ");
+  }
+
+  return response.json();
+}
+
 export async function joinGroup(groupId: number): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/groups/${groupId}/join`, {
     method: "POST",
@@ -381,6 +434,129 @@ export async function followAuthor(authorId: number): Promise<void> {
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.detail || "Không thể follow tác giả");
+  }
+}
+
+// ============================================
+// ADMIN API
+// ============================================
+
+export async function getAdminStats(): Promise<{
+  total_users: number;
+  total_books: number;
+  total_reviews: number;
+  total_groups: number;
+  total_challenges: number;
+  total_user_books: number;
+  active_users: number;
+  admin_users: number;
+}> {
+  const response = await fetch(`${API_BASE_URL}/admin/stats`, {
+    method: "GET",
+    headers: getHeaders(true),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể lấy thống kê");
+  }
+
+  return response.json();
+}
+
+export async function getAllUsers(search?: string, role?: string): Promise<User[]> {
+  const params = new URLSearchParams();
+  if (search) params.append("search", search);
+  if (role) params.append("role", role);
+  
+  const response = await fetch(`${API_BASE_URL}/admin/users?${params}`, {
+    method: "GET",
+    headers: getHeaders(true),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể lấy danh sách người dùng");
+  }
+
+  return response.json();
+}
+
+export async function updateUserAdmin(
+  userId: number,
+  data: { name?: string; email?: string; role?: string; is_active?: boolean }
+): Promise<User> {
+  const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
+    method: "PATCH",
+    headers: getHeaders(true),
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể cập nhật người dùng");
+  }
+
+  return response.json();
+}
+
+export async function deleteUserAdmin(userId: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
+    method: "DELETE",
+    headers: getHeaders(true),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể xóa người dùng");
+  }
+}
+
+export async function deleteBookAdmin(bookId: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/admin/books/${bookId}`, {
+    method: "DELETE",
+    headers: getHeaders(true),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể xóa sách");
+  }
+}
+
+export async function deleteReviewAdmin(reviewId: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/admin/reviews/${reviewId}`, {
+    method: "DELETE",
+    headers: getHeaders(true),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể xóa đánh giá");
+  }
+}
+
+export async function deleteGroupAdmin(groupId: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/admin/groups/${groupId}`, {
+    method: "DELETE",
+    headers: getHeaders(true),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể xóa câu lạc bộ");
+  }
+}
+
+export async function deleteChallengeAdmin(challengeId: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/admin/challenges/${challengeId}`, {
+    method: "DELETE",
+    headers: getHeaders(true),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể xóa thử thách");
   }
 }
 

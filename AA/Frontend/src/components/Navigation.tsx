@@ -1,6 +1,22 @@
 import { NavLink } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { getCurrentUser, User } from "../api/backend";
 
 const Navigation = () => {
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const userData = await getCurrentUser();
+        setUser(userData);
+      } catch (err) {
+        // User not logged in or error
+      }
+    };
+    loadUser();
+  }, []);
+
   const handleClick = (path: string) => {
     console.log("Navigation clicked:", path);
   };
@@ -42,6 +58,15 @@ const Navigation = () => {
       >
         Tác giả
       </NavLink>
+      {user && user.role === "admin" && (
+        <NavLink 
+          to="/admin" 
+          className={({ isActive }) => (isActive ? "page-nav-link active" : "page-nav-link")}
+          onClick={() => handleClick("/admin")}
+        >
+          Admin
+        </NavLink>
+      )}
     </nav>
   );
 };

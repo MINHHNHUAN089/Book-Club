@@ -74,7 +74,7 @@ const RecommendationsPage = ({ books, allBooks = [], onAddBook }: Recommendation
           <Navigation />
         </div>
         <div className="header-actions">
-          <button className="primary-btn">+ Thêm sách</button>
+          <button className="primary-btn" onClick={() => navigate("/discover")}>+ Thêm sách</button>
           <div 
             className="avatar" 
             aria-label="User avatar"

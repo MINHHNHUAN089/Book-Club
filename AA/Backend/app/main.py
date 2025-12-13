@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.database import engine, Base
-from app.routers import auth, books, reviews, groups, challenges, authors, upload
+from app.routers import auth, books, reviews, groups, challenges, authors, upload, admin
 from pathlib import Path
 
 # Create database tables
@@ -32,6 +32,7 @@ app.include_router(groups.router)
 app.include_router(challenges.router)
 app.include_router(authors.router)
 app.include_router(upload.router)
+app.include_router(admin.router)
 
 # Serve static files (ảnh sách)
 static_dir = Path(__file__).parent.parent / "static"

@@ -1,18 +1,26 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
-import { Group } from "../api/backend";
-import { joinGroup } from "../api/backend";
+import { Group, createGroup, joinGroup } from "../api/backend";
 
 interface GroupsPageProps {
   groups: Group[];
+  onGroupCreated?: () => void;
 }
 
-const GroupsPage = ({ groups }: GroupsPageProps) => {
+const GroupsPage = ({ groups, onGroupCreated }: GroupsPageProps) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"explore" | "my-clubs">("explore");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"members" | "activity" | "date">("members");
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    topic: "",
+    current_book_id: undefined as number | undefined,
+  });
+  const [isCreating, setIsCreating] = useState(false);
 
   const filteredGroups = groups.filter((group) =>
     group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -27,6 +35,36 @@ const GroupsPage = ({ groups }: GroupsPageProps) => {
     return (b.members_count || 0) - (a.members_count || 0);
   });
 
+  const handleCreateGroup = async () => {
+    if (!formData.name.trim()) {
+      alert("Vui lòng nhập tên câu lạc bộ");
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      await createGroup({
+        name: formData.name,
+        description: formData.description || undefined,
+        topic: formData.topic || undefined,
+        current_book_id: formData.current_book_id || undefined,
+      });
+      alert("Đã tạo câu lạc bộ thành công!");
+      setShowCreateModal(false);
+      setFormData({ name: "", description: "", topic: "", current_book_id: undefined });
+      if (onGroupCreated) {
+        onGroupCreated();
+      } else {
+        window.location.reload();
+      }
+    } catch (err) {
+      console.error("Error creating group:", err);
+      alert(err instanceof Error ? err.message : "Không thể tạo câu lạc bộ");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   return (
     <div className="dark-page">
       <header className="dark-header">
@@ -40,7 +78,8 @@ const GroupsPage = ({ groups }: GroupsPageProps) => {
           <Navigation />
         </div>
         <div className="header-actions">
-          <button className="primary-btn">+ Tạo Câu lạc bộ</button>
+          <button className="primary-btn" onClick={() => navigate("/discover")}>+ Thêm sách</button>
+          <button className="primary-btn" onClick={() => setShowCreateModal(true)}>+ Tạo Câu lạc bộ</button>
           <div 
             className="avatar" 
             aria-label="User avatar"
@@ -131,6 +170,138 @@ const GroupsPage = ({ groups }: GroupsPageProps) => {
             </div>
           </div>
         ))}
+        </div>
+      )}
+
+      {/* Create Group Modal */}
+      {showCreateModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.7)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={() => setShowCreateModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: "#1e293b",
+              borderRadius: "16px",
+              padding: "32px",
+              width: "90%",
+              maxWidth: "500px",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ color: "#e2e8f0", fontSize: "24px", fontWeight: 700, marginBottom: "24px" }}>
+              Tạo Câu lạc bộ mới
+            </h2>
+            
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{ display: "block", color: "#cbd5e1", marginBottom: "8px", fontWeight: 600 }}>
+                Tên câu lạc bộ <span style={{ color: "#ef4444" }}>*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Nhập tên câu lạc bộ"
+                style={{
+                  width: "100%",
+                  padding: "12px",
+                  borderRadius: "8px",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  backgroundColor: "#0f172a",
+                  color: "#e2e8f0",
+                  fontSize: "16px",
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{ display: "block", color: "#cbd5e1", marginBottom: "8px", fontWeight: 600 }}>
+                Mô tả
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Nhập mô tả về câu lạc bộ"
+                rows={4}
+                style={{
+                  width: "100%",
+                  padding: "12px",
+                  borderRadius: "8px",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  backgroundColor: "#0f172a",
+                  color: "#e2e8f0",
+                  fontSize: "16px",
+                  resize: "vertical",
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: "24px" }}>
+              <label style={{ display: "block", color: "#cbd5e1", marginBottom: "8px", fontWeight: 600 }}>
+                Chủ đề
+              </label>
+              <input
+                type="text"
+                value={formData.topic}
+                onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
+                placeholder="Ví dụ: Khoa học viễn tưởng, Lịch sử..."
+                style={{
+                  width: "100%",
+                  padding: "12px",
+                  borderRadius: "8px",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  backgroundColor: "#0f172a",
+                  color: "#e2e8f0",
+                  fontSize: "16px",
+                }}
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: "8px",
+                  border: "1px solid rgba(255, 255, 255, 0.2)",
+                  backgroundColor: "transparent",
+                  color: "#cbd5e1",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+                disabled={isCreating}
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleCreateGroup}
+                disabled={isCreating || !formData.name.trim()}
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: "8px",
+                  border: "none",
+                  backgroundColor: isCreating || !formData.name.trim() ? "#475569" : "#13a4ec",
+                  color: "white",
+                  cursor: isCreating || !formData.name.trim() ? "not-allowed" : "pointer",
+                  fontWeight: 700,
+                }}
+              >
+                {isCreating ? "Đang tạo..." : "Tạo Câu lạc bộ"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

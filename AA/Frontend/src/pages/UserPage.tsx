@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
-import { getCurrentUser, logout, User, getMyBooks, UserBook, updateBookProgress } from "../api/backend";
+import { getCurrentUser, logout, User, getMyBooks, UserBook, updateBookProgress, updateUser, changePassword } from "../api/backend";
 import BookList from "../components/BookList";
 
 const UserPage = () => {
@@ -10,6 +10,11 @@ const UserPage = () => {
   const [userBooks, setUserBooks] = useState<UserBook[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"overview" | "books" | "settings">("overview");
+  const [editMode, setEditMode] = useState(false);
+  const [editData, setEditData] = useState({ name: "", email: "" });
+  const [passwordData, setPasswordData] = useState({ current: "", new: "", confirm: "" });
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -207,14 +212,29 @@ const UserPage = () => {
           {activeTab === "settings" && (
             <div className="user-settings">
               <div className="user-settings-section">
-                <h3 className="user-settings-title">Thông tin tài khoản</h3>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+                  <h3 className="user-settings-title">Thông tin tài khoản</h3>
+                  {!editMode && (
+                    <button
+                      className="primary-btn"
+                      onClick={() => {
+                        setEditMode(true);
+                        setEditData({ name: user.name, email: user.email });
+                      }}
+                      style={{ padding: "8px 16px", fontSize: "14px" }}
+                    >
+                      Chỉnh sửa
+                    </button>
+                  )}
+                </div>
                 <div className="user-settings-item">
                   <label className="user-settings-label">Tên</label>
                   <input
                     type="text"
                     className="user-settings-input"
-                    value={user.name}
-                    readOnly
+                    value={editMode ? editData.name : user.name}
+                    readOnly={!editMode}
+                    onChange={(e) => setEditData({ ...editData, name: e.target.value })}
                   />
                 </div>
                 <div className="user-settings-item">
@@ -222,13 +242,114 @@ const UserPage = () => {
                   <input
                     type="email"
                     className="user-settings-input"
-                    value={user.email}
-                    readOnly
+                    value={editMode ? editData.email : user.email}
+                    readOnly={!editMode}
+                    onChange={(e) => setEditData({ ...editData, email: e.target.value })}
                   />
                 </div>
+                {editMode && (
+                  <div style={{ display: "flex", gap: "12px", marginTop: "20px" }}>
+                    <button
+                      className="secondary-btn"
+                      onClick={() => {
+                        setEditMode(false);
+                        setEditData({ name: user.name, email: user.email });
+                      }}
+                      disabled={isUpdating}
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      className="primary-btn"
+                      onClick={async () => {
+                        setIsUpdating(true);
+                        try {
+                          const updatedUser = await updateUser(editData);
+                          setUser(updatedUser);
+                          setEditMode(false);
+                          alert("Đã cập nhật thông tin thành công!");
+                        } catch (err) {
+                          console.error("Error updating user:", err);
+                          alert(err instanceof Error ? err.message : "Không thể cập nhật thông tin");
+                        } finally {
+                          setIsUpdating(false);
+                        }
+                      }}
+                      disabled={isUpdating}
+                    >
+                      {isUpdating ? "Đang lưu..." : "Lưu thay đổi"}
+                    </button>
+                  </div>
+                )}
               </div>
 
-              <div className="user-settings-section">
+              <div className="user-settings-section" style={{ marginTop: "32px" }}>
+                <h3 className="user-settings-title">Đổi mật khẩu</h3>
+                <div className="user-settings-item">
+                  <label className="user-settings-label">Mật khẩu hiện tại</label>
+                  <input
+                    type="password"
+                    className="user-settings-input"
+                    value={passwordData.current}
+                    onChange={(e) => setPasswordData({ ...passwordData, current: e.target.value })}
+                    placeholder="Nhập mật khẩu hiện tại"
+                  />
+                </div>
+                <div className="user-settings-item">
+                  <label className="user-settings-label">Mật khẩu mới</label>
+                  <input
+                    type="password"
+                    className="user-settings-input"
+                    value={passwordData.new}
+                    onChange={(e) => setPasswordData({ ...passwordData, new: e.target.value })}
+                    placeholder="Nhập mật khẩu mới"
+                  />
+                </div>
+                <div className="user-settings-item">
+                  <label className="user-settings-label">Xác nhận mật khẩu mới</label>
+                  <input
+                    type="password"
+                    className="user-settings-input"
+                    value={passwordData.confirm}
+                    onChange={(e) => setPasswordData({ ...passwordData, confirm: e.target.value })}
+                    placeholder="Nhập lại mật khẩu mới"
+                  />
+                </div>
+                <button
+                  className="primary-btn"
+                  onClick={async () => {
+                    if (!passwordData.current || !passwordData.new || !passwordData.confirm) {
+                      alert("Vui lòng điền đầy đủ thông tin");
+                      return;
+                    }
+                    if (passwordData.new !== passwordData.confirm) {
+                      alert("Mật khẩu mới không khớp");
+                      return;
+                    }
+                    if (passwordData.new.length < 6) {
+                      alert("Mật khẩu phải có ít nhất 6 ký tự");
+                      return;
+                    }
+                    setIsChangingPassword(true);
+                    try {
+                      await changePassword(passwordData.current, passwordData.new);
+                      alert("Đã đổi mật khẩu thành công!");
+                      setPasswordData({ current: "", new: "", confirm: "" });
+                    } catch (err) {
+                      console.error("Error changing password:", err);
+                      alert(err instanceof Error ? err.message : "Không thể đổi mật khẩu");
+                    } finally {
+                      setIsChangingPassword(false);
+                    }
+                  }}
+                  disabled={isChangingPassword}
+                  style={{ marginTop: "20px" }}
+                >
+                  {isChangingPassword ? "Đang đổi..." : "Đổi mật khẩu"}
+                </button>
+              </div>
+
+              <div className="user-settings-section" style={{ marginTop: "32px" }}>
                 <h3 className="user-settings-title">Hành động</h3>
                 <button className="user-logout-btn" onClick={handleLogout}>
                   Đăng xuất
