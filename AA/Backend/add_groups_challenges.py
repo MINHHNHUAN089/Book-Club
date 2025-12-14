@@ -3,7 +3,7 @@ Script để thêm dữ liệu mẫu cho Groups và Challenges
 """
 import sys
 import io
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # Fix encoding
@@ -95,24 +95,24 @@ def add_sample_data():
         db.commit()
         print(f"\n📊 Đã tạo {groups_created} groups mới")
         
-        # Tạo Challenges
+        # Tạo Challenges (10 thử thách)
         print("\n🎯 Tạo Challenges...")
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         challenges_data = [
             {
                 "title": "Thử thách đọc 50 cuốn sách năm 2024",
-                "description": "Đọc 50 cuốn sách trước khi kết thúc năm 2024",
+                "description": "Đọc 50 cuốn sách trước khi kết thúc năm 2024. Thử thách lớn nhất của năm!",
                 "cover_url": "http://localhost:8000/static/images/books/book_1.jpg",
                 "target_books": 50,
-                "start_date": datetime(2024, 1, 1),
-                "end_date": datetime(2024, 12, 31),
+                "start_date": datetime(2024, 1, 1, tzinfo=timezone.utc),
+                "end_date": datetime(2024, 12, 31, 23, 59, 59, tzinfo=timezone.utc),
                 "xp_reward": 5000,
                 "badge": "📚 Bookworm 2024",
-                "tags": "reading,2024,challenge",
+                "tags": "reading,2024,challenge,yearly",
             },
             {
                 "title": "Thử thách đọc sách khoa học viễn tưởng",
-                "description": "Đọc 10 cuốn sách khoa học viễn tưởng trong 3 tháng",
+                "description": "Đọc 10 cuốn sách khoa học viễn tưởng trong 3 tháng. Khám phá thế giới tương lai!",
                 "cover_url": "http://localhost:8000/static/images/books/book_1.jpg",
                 "target_books": 10,
                 "start_date": now,
@@ -123,7 +123,7 @@ def add_sample_data():
             },
             {
                 "title": "Thử thách đọc sách Việt Nam",
-                "description": "Đọc 15 cuốn sách văn học Việt Nam",
+                "description": "Đọc 15 cuốn sách văn học Việt Nam. Tìm hiểu văn hóa và lịch sử qua trang sách.",
                 "cover_url": "http://localhost:8000/static/images/books/book_6.jpg",
                 "target_books": 15,
                 "start_date": now,
@@ -134,7 +134,7 @@ def add_sample_data():
             },
             {
                 "title": "Thử thách Self-help 30 ngày",
-                "description": "Đọc 5 cuốn sách self-help trong 30 ngày",
+                "description": "Đọc 5 cuốn sách self-help trong 30 ngày. Phát triển bản thân mỗi ngày!",
                 "cover_url": "http://localhost:8000/static/images/books/book_8.jpg",
                 "target_books": 5,
                 "start_date": now,
@@ -145,7 +145,7 @@ def add_sample_data():
             },
             {
                 "title": "Thử thách đọc sách lịch sử",
-                "description": "Đọc 8 cuốn sách về lịch sử",
+                "description": "Đọc 8 cuốn sách về lịch sử. Tìm hiểu quá khứ để hiểu hiện tại.",
                 "cover_url": "http://localhost:8000/static/images/books/book_33.jpg",
                 "target_books": 8,
                 "start_date": now,
@@ -153,6 +153,61 @@ def add_sample_data():
                 "xp_reward": 2500,
                 "badge": "📜 History Buff",
                 "tags": "history,non-fiction",
+            },
+            {
+                "title": "Thử thách đọc sách kinh điển",
+                "description": "Đọc 12 cuốn sách văn học kinh điển. Trải nghiệm những tác phẩm bất hủ.",
+                "cover_url": "http://localhost:8000/static/images/books/book_2.jpg",
+                "target_books": 12,
+                "start_date": now,
+                "end_date": now + timedelta(days=200),
+                "xp_reward": 3500,
+                "badge": "🏛️ Classic Reader",
+                "tags": "classic,literature,reading",
+            },
+            {
+                "title": "Thử thách đọc sách mỗi ngày",
+                "description": "Đọc ít nhất 1 cuốn sách mỗi tuần trong 2 tháng. Xây dựng thói quen đọc sách!",
+                "cover_url": "http://localhost:8000/static/images/books/book_3.jpg",
+                "target_books": 8,
+                "start_date": now,
+                "end_date": now + timedelta(days=60),
+                "xp_reward": 1800,
+                "badge": "📖 Daily Reader",
+                "tags": "daily,habit,reading",
+            },
+            {
+                "title": "Thử thách Fantasy Marathon",
+                "description": "Đọc 20 cuốn sách fantasy trong 6 tháng. Hành trình qua các thế giới phép thuật!",
+                "cover_url": "http://localhost:8000/static/images/books/book_12.jpg",
+                "target_books": 20,
+                "start_date": now,
+                "end_date": now + timedelta(days=180),
+                "xp_reward": 4000,
+                "badge": "🧙 Fantasy Master",
+                "tags": "fantasy,marathon,reading",
+            },
+            {
+                "title": "Thử thách đọc sách khoa học",
+                "description": "Đọc 7 cuốn sách khoa học phổ biến. Khám phá vũ trụ và thế giới tự nhiên.",
+                "cover_url": "http://localhost:8000/static/images/books/book_33.jpg",
+                "target_books": 7,
+                "start_date": now,
+                "end_date": now + timedelta(days=100),
+                "xp_reward": 2200,
+                "badge": "🔬 Science Explorer",
+                "tags": "science,non-fiction,learning",
+            },
+            {
+                "title": "Thử thách đọc sách nhanh",
+                "description": "Đọc 3 cuốn sách trong 1 tuần. Thử thách tốc độ đọc!",
+                "cover_url": "http://localhost:8000/static/images/books/book_4.jpg",
+                "target_books": 3,
+                "start_date": now,
+                "end_date": now + timedelta(days=7),
+                "xp_reward": 800,
+                "badge": "⚡ Speed Reader",
+                "tags": "speed,quick,reading",
             },
         ]
         
