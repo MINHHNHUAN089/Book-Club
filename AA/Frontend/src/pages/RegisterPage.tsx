@@ -28,11 +28,17 @@ const RegisterPage = () => {
     setLoading(true);
 
     try {
-      await register({ name, email, password });
+      const result = await register({ name, email, password });
       // Sau khi đăng ký thành công, chuyển đến trang chủ
-      navigate("/books");
+      if (result.access_token) {
+        navigate("/books");
+      } else {
+        setError("Đăng ký thành công nhưng không nhận được token");
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Đăng ký thất bại");
+      const errorMessage = err instanceof Error ? err.message : "Đăng ký thất bại";
+      setError(errorMessage);
+      console.error("Registration error:", err);
     } finally {
       setLoading(false);
     }

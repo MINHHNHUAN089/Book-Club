@@ -61,22 +61,38 @@ export interface User {
 }
 
 export async function register(data: RegisterData): Promise<AuthResponse> {
-  const response = await fetch(`${API_BASE_URL}/auth/register`, {
-    method: "POST",
-    headers: getHeaders(false),
-    body: JSON.stringify(data),
-  });
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || "Đăng ký thất bại");
-  }
+    if (!response.ok) {
+      let errorMessage = "Đăng ký thất bại";
+      try {
+        const error = await response.json();
+        errorMessage = error.detail || error.message || errorMessage;
+      } catch {
+        errorMessage = `Lỗi ${response.status}: ${response.statusText}`;
+      }
+      throw new Error(errorMessage);
+    }
 
-  const result = await response.json();
-  if (result.access_token) {
-    setToken(result.access_token);
+    const result = await response.json();
+    if (result.access_token) {
+      setToken(result.access_token);
+    }
+    return result;
+  } catch (error) {
+    // Handle network errors
+    if (error instanceof TypeError && error.message.includes("fetch")) {
+      throw new Error("Không thể kết nối đến server. Vui lòng kiểm tra backend có đang chạy không.");
+    }
+    throw error;
   }
-  return result;
 }
 
 export async function login(data: LoginData): Promise<AuthResponse> {
