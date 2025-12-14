@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
-import { Group, createGroup, joinGroup } from "../api/backend";
+import { Group, createGroup, joinGroup, leaveGroup, getMyGroups } from "../api/backend";
 
 interface GroupsPageProps {
   groups: Group[];
@@ -21,8 +21,37 @@ const GroupsPage = ({ groups, onGroupCreated }: GroupsPageProps) => {
     current_book_id: undefined as number | undefined,
   });
   const [isCreating, setIsCreating] = useState(false);
+  const [myGroups, setMyGroups] = useState<Group[]>([]);
+  const [loadingMyGroups, setLoadingMyGroups] = useState(false);
 
-  const filteredGroups = groups.filter((group) =>
+  // Fetch my groups to check membership
+  useEffect(() => {
+    const fetchMyGroups = async () => {
+      setLoadingMyGroups(true);
+      try {
+        const myGroupsData = await getMyGroups();
+        setMyGroups(myGroupsData);
+      } catch (err) {
+        console.error("Error fetching my groups:", err);
+        // If error, just set empty array
+        setMyGroups([]);
+      } finally {
+        setLoadingMyGroups(false);
+      }
+    };
+
+    fetchMyGroups();
+  }, []);
+
+  // Check if user is member of a group
+  const isMember = (groupId: number): boolean => {
+    return myGroups.some(g => g.id === groupId);
+  };
+
+  // Filter groups based on active tab
+  const groupsToShow = activeTab === "my-clubs" ? myGroups : groups;
+
+  const filteredGroups = groupsToShow.filter((group) =>
     group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (group.description || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -118,7 +147,16 @@ const GroupsPage = ({ groups, onGroupCreated }: GroupsPageProps) => {
       </section>
 
       {/* Club Grid */}
-      {sortedGroups.length === 0 ? (
+      {loadingMyGroups && activeTab === "my-clubs" ? (
+        <div style={{
+          textAlign: "center",
+          padding: "80px 20px",
+          color: "#94a3b8"
+        }}>
+          <div style={{ fontSize: "24px", marginBottom: "12px" }}>⏳</div>
+          <p style={{ fontSize: "16px" }}>Đang tải...</p>
+        </div>
+      ) : sortedGroups.length === 0 ? (
         <div style={{
           textAlign: "center",
           padding: "80px 20px",
@@ -126,10 +164,13 @@ const GroupsPage = ({ groups, onGroupCreated }: GroupsPageProps) => {
         }}>
           <div style={{ fontSize: "64px", marginBottom: "24px" }}>👥</div>
           <h3 style={{ color: "#e2e8f0", fontSize: "24px", fontWeight: 700, margin: "0 0 12px" }}>
-            Chưa có câu lạc bộ nào
+            {activeTab === "my-clubs" ? "Chưa tham gia câu lạc bộ nào" : "Chưa có câu lạc bộ nào"}
           </h3>
           <p style={{ fontSize: "16px", margin: "0 0 32px", maxWidth: "400px", marginLeft: "auto", marginRight: "auto" }}>
-            Tạo hoặc tham gia câu lạc bộ đọc sách để kết nối với bạn bè
+            {activeTab === "my-clubs" 
+              ? "Tham gia các câu lạc bộ để xem chúng ở đây"
+              : "Tạo hoặc tham gia câu lạc bộ đọc sách để kết nối với bạn bè"
+            }
           </p>
         </div>
       ) : (
@@ -151,22 +192,52 @@ const GroupsPage = ({ groups, onGroupCreated }: GroupsPageProps) => {
                 <span className="groups-club-icon">👥</span>
                 <span>{group.members_count || 0} thành viên</span>
               </div>
-              <button
-                className="groups-club-join-btn"
-                onClick={async () => {
-                  try {
-                    const groupId = typeof group.id === 'number' ? group.id : Number(group.id);
-                    await joinGroup(groupId);
-                    alert("Đã tham gia câu lạc bộ thành công!");
-                    window.location.reload();
-                  } catch (err) {
-                    console.error("Error joining group:", err);
-                    alert(err instanceof Error ? err.message : "Không thể tham gia câu lạc bộ");
-                  }
-                }}
-              >
-                Tham gia
-              </button>
+              {isMember(typeof group.id === 'number' ? group.id : Number(group.id)) ? (
+                <button
+                  className="groups-club-leave-btn"
+                  onClick={async () => {
+                    if (!confirm("Bạn có chắc chắn muốn rời câu lạc bộ này?")) {
+                      return;
+                    }
+                    try {
+                      const groupId = typeof group.id === 'number' ? group.id : Number(group.id);
+                      await leaveGroup(groupId);
+                      alert("Đã rời câu lạc bộ thành công!");
+                      // Refresh my groups
+                      const myGroupsData = await getMyGroups();
+                      setMyGroups(myGroupsData);
+                      // Reload page to update groups list
+                      window.location.reload();
+                    } catch (err) {
+                      console.error("Error leaving group:", err);
+                      alert(err instanceof Error ? err.message : "Không thể rời câu lạc bộ");
+                    }
+                  }}
+                >
+                  Rời nhóm
+                </button>
+              ) : (
+                <button
+                  className="groups-club-join-btn"
+                  onClick={async () => {
+                    try {
+                      const groupId = typeof group.id === 'number' ? group.id : Number(group.id);
+                      await joinGroup(groupId);
+                      alert("Đã tham gia câu lạc bộ thành công!");
+                      // Refresh my groups
+                      const myGroupsData = await getMyGroups();
+                      setMyGroups(myGroupsData);
+                      // Reload page to update groups list
+                      window.location.reload();
+                    } catch (err) {
+                      console.error("Error joining group:", err);
+                      alert(err instanceof Error ? err.message : "Không thể tham gia câu lạc bộ");
+                    }
+                  }}
+                >
+                  Tham gia
+                </button>
+              )}
             </div>
           </div>
         ))}

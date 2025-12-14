@@ -374,6 +374,31 @@ export async function joinGroup(groupId: number): Promise<void> {
   }
 }
 
+export async function leaveGroup(groupId: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/groups/${groupId}/leave`, {
+    method: "POST",
+    headers: getHeaders(true),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể rời câu lạc bộ");
+  }
+}
+
+export async function getMyGroups(): Promise<Group[]> {
+  const response = await fetch(`${API_BASE_URL}/groups/user/my-groups`, {
+    method: "GET",
+    headers: getHeaders(true),
+  });
+
+  if (!response.ok) {
+    throw new Error("Không thể lấy danh sách câu lạc bộ của tôi");
+  }
+
+  return response.json();
+}
+
 // ============================================
 // CHALLENGES API
 // ============================================
