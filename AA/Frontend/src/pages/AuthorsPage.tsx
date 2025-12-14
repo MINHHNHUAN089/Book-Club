@@ -1,8 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
 import { Author } from "../api/backend";
-import { followAuthor } from "../api/backend";
+import { followAuthor, unfollowAuthor, getFollowedAuthors } from "../api/backend";
 
 interface AuthorsPageProps {
   authors: Author[];
@@ -11,7 +11,32 @@ interface AuthorsPageProps {
 const AuthorsPage = ({ authors }: AuthorsPageProps) => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<"all" | "new_books" | "recent">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "followed" | "new_books" | "recent">("all");
+  const [followedAuthors, setFollowedAuthors] = useState<Author[]>([]);
+  const [loadingFollowed, setLoadingFollowed] = useState(false);
+
+  // Fetch followed authors
+  useEffect(() => {
+    const fetchFollowedAuthors = async () => {
+      setLoadingFollowed(true);
+      try {
+        const followedData = await getFollowedAuthors();
+        setFollowedAuthors(followedData);
+      } catch (err) {
+        console.error("Error fetching followed authors:", err);
+        setFollowedAuthors([]);
+      } finally {
+        setLoadingFollowed(false);
+      }
+    };
+
+    fetchFollowedAuthors();
+  }, []);
+
+  // Check if author is followed
+  const isFollowed = (authorId: number): boolean => {
+    return followedAuthors.some(a => a.id === authorId);
+  };
 
   const filteredAuthors = useMemo(() => {
     let filtered = authors.filter(
@@ -19,9 +44,14 @@ const AuthorsPage = ({ authors }: AuthorsPageProps) => {
         author.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    // Note: API Author doesn't have activity field, so we'll show all for now
+    // Filter by tab
+    if (activeTab === "followed") {
+      filtered = filtered.filter(author => isFollowed(author.id));
+    }
+    // Note: API Author doesn't have activity field, so "new_books" and "recent" show all for now
+
     return filtered;
-  }, [authors, searchQuery, activeTab]);
+  }, [authors, searchQuery, activeTab, followedAuthors]);
 
   const formatFollowers = (count?: number) => {
     if (!count) return "0";
@@ -71,6 +101,13 @@ const AuthorsPage = ({ authors }: AuthorsPageProps) => {
             type="button"
           >
             Tất cả
+          </button>
+          <button
+            className={`tab ${activeTab === "followed" ? "active" : ""}`}
+            onClick={() => setActiveTab("followed")}
+            type="button"
+          >
+            Đang theo dõi
           </button>
           <button
             className={`tab ${activeTab === "new_books" ? "active" : ""}`}
@@ -137,20 +174,46 @@ const AuthorsPage = ({ authors }: AuthorsPageProps) => {
 
               {/* Card Footer */}
               <div className="authors-card-footer">
-                <button
-                  className="authors-view-books-btn"
-                  onClick={async () => {
-                    try {
-                      await followAuthor(author.id);
-                      alert("Đã follow tác giả thành công!");
-                    } catch (err) {
-                      console.error("Error following author:", err);
-                      alert(err instanceof Error ? err.message : "Không thể follow tác giả");
-                    }
-                  }}
-                >
-                  Theo dõi
-                </button>
+                {isFollowed(author.id) ? (
+                  <button
+                    className="authors-unfollow-btn"
+                    onClick={async () => {
+                      if (!confirm("Bạn có chắc chắn muốn bỏ theo dõi tác giả này?")) {
+                        return;
+                      }
+                      try {
+                        await unfollowAuthor(author.id);
+                        alert("Đã bỏ theo dõi tác giả!");
+                        // Refresh followed authors
+                        const followedData = await getFollowedAuthors();
+                        setFollowedAuthors(followedData);
+                      } catch (err) {
+                        console.error("Error unfollowing author:", err);
+                        alert(err instanceof Error ? err.message : "Không thể bỏ theo dõi tác giả");
+                      }
+                    }}
+                  >
+                    Đã theo dõi
+                  </button>
+                ) : (
+                  <button
+                    className="authors-view-books-btn"
+                    onClick={async () => {
+                      try {
+                        await followAuthor(author.id);
+                        alert("Đã follow tác giả thành công!");
+                        // Refresh followed authors
+                        const followedData = await getFollowedAuthors();
+                        setFollowedAuthors(followedData);
+                      } catch (err) {
+                        console.error("Error following author:", err);
+                        alert(err instanceof Error ? err.message : "Không thể follow tác giả");
+                      }
+                    }}
+                  >
+                    Theo dõi
+                  </button>
+                )}
               </div>
             </div>
           ))}

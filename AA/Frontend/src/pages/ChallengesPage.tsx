@@ -1,8 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
-import { Challenge as APIChallenge } from "../api/backend";
-import { joinChallenge } from "../api/backend";
+import { Challenge as APIChallenge, UserChallenge } from "../api/backend";
+import { joinChallenge, leaveChallenge, getMyChallenges } from "../api/backend";
 
 interface ChallengesPageProps {
   challenges: APIChallenge[];
@@ -12,33 +12,77 @@ const ChallengesPage = ({ challenges }: ChallengesPageProps) => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"all" | "active" | "not_joined" | "completed">("all");
+  const [myChallenges, setMyChallenges] = useState<UserChallenge[]>([]);
+  const [loadingMyChallenges, setLoadingMyChallenges] = useState(false);
 
-  // Tính status cho mỗi challenge dựa trên thời gian
+  // Fetch my challenges to get progress
+  useEffect(() => {
+    const fetchMyChallenges = async () => {
+      setLoadingMyChallenges(true);
+      try {
+        const myChallengesData = await getMyChallenges();
+        setMyChallenges(myChallengesData);
+      } catch (err) {
+        console.error("Error fetching my challenges:", err);
+        setMyChallenges([]);
+      } finally {
+        setLoadingMyChallenges(false);
+      }
+    };
+
+    fetchMyChallenges();
+  }, []);
+
+  // Helper to get challenge progress
+  const getChallengeProgress = (challengeId: number): { progress: number; completed: boolean } => {
+    const myChallenge = myChallenges.find(uc => uc.challenge.id === challengeId);
+    return {
+      progress: myChallenge?.progress || 0,
+      completed: myChallenge?.completed || false
+    };
+  };
+
+  // Check if user is participating in a challenge
+  const isParticipating = (challengeId: number): boolean => {
+    return myChallenges.some(uc => uc.challenge.id === challengeId);
+  };
+
+  // Tính status cho mỗi challenge dựa trên thời gian và participation
   const challengesWithStatus = useMemo(() => {
     const now = new Date();
     return challenges.map((challenge) => {
       const startDate = new Date(challenge.start_date);
       const endDate = new Date(challenge.end_date);
+      const { progress, completed } = getChallengeProgress(challenge.id);
+      const participating = isParticipating(challenge.id);
       
       let status: "active" | "not_joined" | "completed" = "not_joined";
       
-      // Nếu challenge đã có status từ API, dùng nó
-      if (challenge.status) {
-        status = challenge.status;
+      if (completed) {
+        status = "completed";
+      } else if (participating) {
+        // Nếu đang tham gia và trong thời gian
+        if (now >= startDate && now <= endDate) {
+          status = "active";
+        } else if (now > endDate) {
+          status = "completed"; // Đã hết hạn nhưng chưa hoàn thành
+        } else {
+          status = "active"; // Chưa bắt đầu nhưng đã join
+        }
       } else {
-        // Tính status dựa trên thời gian
+        // Chưa tham gia
         if (now < startDate) {
           status = "not_joined"; // Chưa bắt đầu
         } else if (now >= startDate && now <= endDate) {
-          status = "active"; // Đang diễn ra
+          status = "not_joined"; // Đang diễn ra nhưng chưa join
         } else {
           status = "completed"; // Đã kết thúc
         }
       }
       
-      return { ...challenge, status };
+      return { ...challenge, status, progress, completed };
     });
-  }, [challenges]);
+  }, [challenges, myChallenges]);
 
   const filteredChallenges = useMemo(() => {
     let filtered = challengesWithStatus.filter((challenge) =>
@@ -150,8 +194,11 @@ const ChallengesPage = ({ challenges }: ChallengesPageProps) => {
         ) : (
           <div className="challenges-grid">
             {filteredChallenges.map((challenge) => {
-            // Calculate progress - API doesn't provide currentCount/totalCount, use 0 for now
-            const progressPercent = 0;
+            const { progress, completed } = getChallengeProgress(challenge.id);
+            const progressPercent = challenge.target_books > 0 
+              ? Math.min(100, (progress / challenge.target_books) * 100)
+              : 0;
+            const participating = isParticipating(challenge.id);
 
             return (
               <div
@@ -205,7 +252,7 @@ const ChallengesPage = ({ challenges }: ChallengesPageProps) => {
                         <span
                           className={`challenges-progress-count ${challenge.status === "completed" ? "completed" : ""}`}
                         >
-                          0/{challenge.target_books} cuốn
+                          {progress}/{challenge.target_books} cuốn
                         </span>
                       </div>
                       <div className="challenges-progress-bar">
@@ -231,8 +278,8 @@ const ChallengesPage = ({ challenges }: ChallengesPageProps) => {
                     </div>
                   )}
 
-                  {/* Join Button for not joined */}
-                  {challenge.status === "not_joined" && (
+                  {/* Join/Leave Buttons */}
+                  {!participating && challenge.status === "not_joined" && (
                     <div className="challenges-join-section">
                       <button
                         className="challenges-join-btn"
@@ -240,6 +287,9 @@ const ChallengesPage = ({ challenges }: ChallengesPageProps) => {
                           try {
                             await joinChallenge(challenge.id);
                             alert("Đã tham gia thử thách thành công!");
+                            // Refresh my challenges
+                            const myChallengesData = await getMyChallenges();
+                            setMyChallenges(myChallengesData);
                             window.location.reload();
                           } catch (err) {
                             console.error("Error joining challenge:", err);
@@ -249,6 +299,31 @@ const ChallengesPage = ({ challenges }: ChallengesPageProps) => {
                       >
                         <span>Tham gia ngay</span>
                         <span className="challenges-join-arrow">→</span>
+                      </button>
+                    </div>
+                  )}
+                  {participating && challenge.status !== "completed" && (
+                    <div className="challenges-join-section">
+                      <button
+                        className="challenges-leave-btn"
+                        onClick={async () => {
+                          if (!confirm("Bạn có chắc chắn muốn rời thử thách này?")) {
+                            return;
+                          }
+                          try {
+                            await leaveChallenge(challenge.id);
+                            alert("Đã rời thử thách thành công!");
+                            // Refresh my challenges
+                            const myChallengesData = await getMyChallenges();
+                            setMyChallenges(myChallengesData);
+                            window.location.reload();
+                          } catch (err) {
+                            console.error("Error leaving challenge:", err);
+                            alert(err instanceof Error ? err.message : "Không thể rời thử thách");
+                          }
+                        }}
+                      >
+                        Rời thử thách
                       </button>
                     </div>
                   )}

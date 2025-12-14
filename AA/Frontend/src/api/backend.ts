@@ -442,6 +442,55 @@ export async function joinChallenge(challengeId: number): Promise<void> {
   }
 }
 
+export async function leaveChallenge(challengeId: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/challenges/${challengeId}/leave`, {
+    method: "POST",
+    headers: getHeaders(true),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể rời thử thách");
+  }
+}
+
+export interface UserChallenge {
+  challenge: Challenge;
+  progress: number;
+  completed: boolean;
+}
+
+export async function getMyChallenges(): Promise<UserChallenge[]> {
+  const response = await fetch(`${API_BASE_URL}/challenges/user/my-challenges`, {
+    method: "GET",
+    headers: getHeaders(true),
+  });
+
+  if (!response.ok) {
+    throw new Error("Không thể lấy danh sách thử thách của tôi");
+  }
+
+  return response.json();
+}
+
+export async function updateChallengeProgress(
+  challengeId: number,
+  progress: number
+): Promise<UserChallenge> {
+  const response = await fetch(`${API_BASE_URL}/challenges/${challengeId}/progress`, {
+    method: "PATCH",
+    headers: getHeaders(true),
+    body: JSON.stringify({ progress }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể cập nhật tiến độ");
+  }
+
+  return response.json();
+}
+
 // ============================================
 // AUTHORS API
 // ============================================
@@ -476,6 +525,31 @@ export async function followAuthor(authorId: number): Promise<void> {
     const error = await response.json();
     throw new Error(error.detail || "Không thể follow tác giả");
   }
+}
+
+export async function unfollowAuthor(authorId: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/authors/${authorId}/unfollow`, {
+    method: "POST",
+    headers: getHeaders(true),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể unfollow tác giả");
+  }
+}
+
+export async function getFollowedAuthors(): Promise<Author[]> {
+  const response = await fetch(`${API_BASE_URL}/authors/user/followed`, {
+    method: "GET",
+    headers: getHeaders(true),
+  });
+
+  if (!response.ok) {
+    throw new Error("Không thể lấy danh sách tác giả đang theo dõi");
+  }
+
+  return response.json();
 }
 
 // ============================================
