@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
+import Footer from "../components/Footer";
 import ReviewForm from "../components/ReviewForm";
 import { Book } from "../types";
 
@@ -37,11 +38,12 @@ const ReviewPage = ({ books, allBooks = [], userBooks = [], selectedBook, onSele
     return combined;
   }, [books, allBooks]);
 
-  // Cập nhật currentBook khi bookIdFromUrl thay đổi
+  // Cập nhật currentBook khi bookIdFromUrl thay đổi hoặc allAvailableBooks thay đổi (để sync rating)
   useEffect(() => {
     if (bookIdFromUrl) {
       const book = allAvailableBooks.find((b) => b.id === bookIdFromUrl);
       if (book) {
+        // Update currentBookState với book mới nhất từ allAvailableBooks (có rating mới)
         setCurrentBookState(book);
         onSelectBook(book);
       } else {
@@ -68,6 +70,17 @@ const ReviewPage = ({ books, allBooks = [], userBooks = [], selectedBook, onSele
     return Math.round(total / allAvailableBooks.length);
   }, [allAvailableBooks]);
 
+  // Cập nhật currentBookState khi allAvailableBooks thay đổi (để sync rating mới)
+  useEffect(() => {
+    if (currentBookState && bookIdFromUrl) {
+      const updatedBook = allAvailableBooks.find((b) => b.id === bookIdFromUrl);
+      if (updatedBook && updatedBook.id === currentBookState.id) {
+        // Chỉ cập nhật nếu cùng một cuốn sách (để sync rating/progress mới)
+        setCurrentBookState(updatedBook);
+      }
+    }
+  }, [allAvailableBooks, currentBookState, bookIdFromUrl]);
+
   // Ưu tiên currentBookState (từ URL) > selectedBook (từ props) > sách đầu tiên
   const currentBook = currentBookState || selectedBook || (allAvailableBooks.length > 0 ? allAvailableBooks[0] : null);
 
@@ -93,7 +106,6 @@ const ReviewPage = ({ books, allBooks = [], userBooks = [], selectedBook, onSele
           <Navigation />
         </div>
         <div className="header-actions">
-          <button className="primary-btn" onClick={() => navigate("/discover")}>+ Thêm sách</button>
           <div 
             className="avatar" 
             aria-label="User avatar"
@@ -127,6 +139,8 @@ const ReviewPage = ({ books, allBooks = [], userBooks = [], selectedBook, onSele
         onBookAdded={onBookAdded}
         onProgressUpdated={onProgressUpdated}
       />
+      
+      <Footer />
     </div>
   );
 };

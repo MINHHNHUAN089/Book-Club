@@ -2,10 +2,10 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BookList from "../components/BookList";
 import Navigation from "../components/Navigation";
+import Footer from "../components/Footer";
 import { Book } from "../types";
 
-type Filter = "all" | "reading" | "want_to_read" | "finished";
-type ViewMode = "my_books" | "all_books";
+type Filter = "all" | "reading";
 
 interface BooksPageProps {
   books: Book[];
@@ -17,14 +17,30 @@ const BooksPage = ({ books, allBooks, onUpdateProgress }: BooksPageProps) => {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
-  const [viewMode, setViewMode] = useState<ViewMode>("my_books");
-
-  // Chọn danh sách sách để hiển thị
-  const booksToShow = viewMode === "my_books" ? books : allBooks;
 
   const filteredBooks = useMemo(() => {
     const normalize = (s: string) => s.toLowerCase();
+    
+    // Debug: Log để kiểm tra
+    console.log("BooksPage - books:", books.length, "allBooks:", allBooks.length, "filter:", filter);
+    console.log("BooksPage - allBooks sample:", allBooks.slice(0, 3));
+    
+    // Chọn danh sách sách để hiển thị
+    const booksToShow = filter === "all" ? allBooks : books;
+    
+    console.log("BooksPage - booksToShow:", booksToShow.length, "Sample:", booksToShow.slice(0, 3));
+    
+    if (booksToShow.length === 0) {
+      console.warn("BooksPage: No books to show! Check if allBooks is loaded correctly.");
+      return [];
+    }
+    
     const filtered = booksToShow.filter((b) => {
+      if (!b || !b.title) {
+        console.warn("BooksPage: Invalid book found:", b);
+        return false;
+      }
+      
       const matchesSearch =
         !search.trim() ||
         normalize(b.title).includes(normalize(search)) ||
@@ -32,19 +48,20 @@ const BooksPage = ({ books, allBooks, onUpdateProgress }: BooksPageProps) => {
 
       if (!matchesSearch) return false;
 
-      // Nếu là "Tất cả sách", không filter theo progress
-      if (viewMode === "all_books") return true;
-
-      // Nếu là "Sách của tôi", filter theo progress
+      // Nếu là "Tất cả sách", hiển thị tất cả
       if (filter === "all") return true;
-      if (filter === "want_to_read") return b.progress === 0;
-      if (filter === "finished") return b.progress >= 100;
-      return b.progress > 0 && b.progress < 100;
+      
+      // Nếu là "Đang đọc", chỉ hiển thị sách có progress > 0 && < 100
+      if (filter === "reading") {
+        return (b.progress || 0) > 0 && (b.progress || 0) < 100;
+      }
+      
+      return true;
     });
     
-    console.log(`BooksPage: ViewMode: ${viewMode}, Total books: ${booksToShow.length}, Filtered: ${filtered.length}, Filter: ${filter}, Search: "${search}"`);
+    console.log(`BooksPage: Total books: ${booksToShow.length}, Filtered: ${filtered.length}, Filter: ${filter}, Search: "${search}"`);
     return filtered;
-  }, [booksToShow, filter, search, viewMode]);
+  }, [allBooks, books, filter, search]);
 
   return (
     <div className="dark-page">
@@ -59,15 +76,6 @@ const BooksPage = ({ books, allBooks, onUpdateProgress }: BooksPageProps) => {
           <Navigation />
         </div>
         <div className="header-actions">
-          <button 
-            className="primary-btn"
-            onClick={() => {
-              console.log("Add book button clicked");
-              navigate("/discover");
-            }}
-          >
-            + Thêm sách
-          </button>
           <div 
             className="avatar" 
             aria-label="User avatar"
@@ -87,64 +95,39 @@ const BooksPage = ({ books, allBooks, onUpdateProgress }: BooksPageProps) => {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <div style={{ display: "flex", gap: "16px", alignItems: "center", marginBottom: "16px" }}>
-          <div className="tabs" style={{ margin: 0 }}>
-            <button
-              className={viewMode === "my_books" ? "tab active" : "tab"}
-              onClick={() => {
-                setViewMode("my_books");
-                setFilter("all"); // Reset filter khi chuyển mode
-              }}
-              type="button"
-            >
-              Sách của tôi
-            </button>
-            <button
-              className={viewMode === "all_books" ? "tab active" : "tab"}
-              onClick={() => {
-                setViewMode("all_books");
-                setFilter("all"); // Reset filter khi chuyển mode
-              }}
-              type="button"
-            >
-              Tất cả sách
-            </button>
-          </div>
-          {viewMode === "my_books" && (
-            <div className="tabs" style={{ margin: 0 }}>
-              {([
-                ["all", "Tất cả"],
-                ["reading", "Đang đọc"],
-                ["want_to_read", "Muốn đọc"],
-                ["finished", "Đã đọc"]
-              ] as const).map(([key, label]) => (
-                <button
-                  key={key}
-                  className={filter === key ? "tab active" : "tab"}
-                  onClick={() => setFilter(key)}
-                  type="button"
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
+        <div className="tabs" style={{ marginBottom: "16px" }}>
+          <button
+            className={filter === "all" ? "tab active" : "tab"}
+            onClick={() => setFilter("all")}
+            type="button"
+          >
+            Tất cả sách
+          </button>
+          <button
+            className={filter === "reading" ? "tab active" : "tab"}
+            onClick={() => setFilter("reading")}
+            type="button"
+          >
+            Đang đọc
+          </button>
         </div>
       </section>
 
       {filteredBooks.length === 0 ? (
         <div className="user-empty-state">
-          {viewMode === "my_books" 
-            ? "Bạn chưa có sách nào. Hãy thêm sách từ trang Khám phá!"
+          {filter === "reading" 
+            ? "Bạn chưa có sách nào đang đọc."
             : "Không tìm thấy sách nào."}
         </div>
       ) : (
         <BookList
           books={filteredBooks}
-          onUpdateProgress={viewMode === "my_books" ? onUpdateProgress : undefined}
+          onUpdateProgress={filter === "reading" ? onUpdateProgress : undefined}
           onSelect={(book) => navigate(`/review?bookId=${book.id}`)}
         />
       )}
+      
+      <Footer />
     </div>
   );
 };

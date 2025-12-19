@@ -5,6 +5,7 @@ import BooksPage from "./pages/BooksPage";
 import ReviewPage from "./pages/ReviewPage";
 import RecommendationsPage from "./pages/RecommendationsPage";
 import GroupsPage from "./pages/GroupsPage";
+import GroupDetailPage from "./pages/GroupDetailPage";
 import ChallengesPage from "./pages/ChallengesPage";
 import AuthorsPage from "./pages/AuthorsPage";
 import DiscoverPage from "./pages/DiscoverPage";
@@ -13,6 +14,7 @@ import RegisterPage from "./pages/RegisterPage";
 import LandingPage from "./pages/LandingPage";
 import UserPage from "./pages/UserPage";
 import AdminPage from "./pages/AdminPage";
+import ReadingPage from "./pages/ReadingPage";
 import { GoogleVolume } from "./api/googleBooks";
 import {
   getMyBooks,
@@ -83,9 +85,11 @@ const App = () => {
             title: ub.book?.title || "Untitled",
             author: authorName,
             coverUrl: ub.book?.cover_url || undefined,
+            fileUrl: ub.book?.file_url || undefined,
             progress: ub.progress || 0,
             rating: ub.rating || undefined,
             review: undefined, // Will be loaded separately if needed
+            description: ub.book?.description || undefined,
           };
         } catch (err) {
           console.error("Error converting UserBook to Book:", err, ub);
@@ -96,6 +100,67 @@ const App = () => {
   }, [userBooks]);
 
   const selectedBookId = useMemo(() => books[0]?.id ?? null, [books]);
+
+  // Listen for challenges updates from AdminPage
+  useEffect(() => {
+    const handleChallengesUpdate = async () => {
+      try {
+        const updatedChallenges = await getChallenges();
+        setChallenges(updatedChallenges);
+        console.log("Challenges reloaded after admin update");
+      } catch (err) {
+        console.error("Error reloading challenges after admin update:", err);
+      }
+    };
+
+    window.addEventListener('challengesUpdated', handleChallengesUpdate);
+
+    return () => {
+      window.removeEventListener('challengesUpdated', handleChallengesUpdate);
+    };
+  }, []);
+
+  // Listen for groups updates from AdminPage
+  useEffect(() => {
+    const handleGroupsUpdate = async () => {
+      try {
+        const updatedGroups = await getGroups();
+        setGroups(updatedGroups);
+        console.log("Groups reloaded after admin update");
+      } catch (err) {
+        console.error("Error reloading groups after admin update:", err);
+      }
+    };
+
+    window.addEventListener('groupsUpdated', handleGroupsUpdate);
+
+    return () => {
+      window.removeEventListener('groupsUpdated', handleGroupsUpdate);
+    };
+  }, []);
+
+  // Listen for progress updates from ReadingPage
+  useEffect(() => {
+    const handleProgressUpdate = async (event: CustomEvent) => {
+      const { bookId, progress } = event.detail;
+      console.log("Progress update event received:", bookId, progress);
+      
+      // Reload userBooks to sync progress
+      try {
+        const updatedBooks = await getMyBooks();
+        setUserBooks(updatedBooks);
+        console.log("UserBooks reloaded after progress update");
+      } catch (err) {
+        console.error("Error reloading books after progress update:", err);
+      }
+    };
+
+    window.addEventListener('bookProgressUpdated', handleProgressUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('bookProgressUpdated', handleProgressUpdate as EventListener);
+    };
+  }, []);
 
   // Load data from API
   useEffect(() => {
@@ -109,48 +174,128 @@ const App = () => {
         setLoading(true);
         setError(null);
 
+        // Add timeout wrapper for API calls
+        const withTimeout = <T,>(promise: Promise<T>, timeoutMs: number = 5000): Promise<T> => {
+          return Promise.race([
+            promise,
+            new Promise<T>((_, reject) => 
+              setTimeout(() => reject(new Error("Request timeout")), timeoutMs)
+            )
+          ]);
+        };
+
         const [booksData, allBooksData, groupsData, challengesData, authorsData] = await Promise.all([
-          getMyBooks().catch((err) => {
-            console.error("Error loading books:", err);
+          withTimeout(getMyBooks().catch((err) => {
+            console.error("Error loading my books:", err);
+            console.error("Error details:", err.message, err.stack);
             return [];
-          }),
-          getBooks().catch((err) => {
+          }), 15000),
+          withTimeout(getBooks().catch((err) => {
             console.error("Error loading all books:", err);
+            console.error("Error details:", err.message, err.stack);
             return [];
-          }),
-          getGroups().catch(() => []),
-          getChallenges().catch(() => []),
-          getAuthors().catch(() => []),
+          }), 15000),
+          withTimeout(getGroups().catch((err) => {
+            console.error("Error loading groups:", err);
+            console.error("Error details:", err.message, err.stack);
+            return [];
+          }), 15000),
+          withTimeout(getChallenges().catch((err) => {
+            console.error("Error loading challenges:", err);
+            return [];
+          }), 10000),
+          withTimeout(getAuthors().catch((err) => {
+            console.error("Error loading authors:", err);
+            return [];
+          }), 10000),
         ]);
 
         console.log("Loaded books data:", booksData);
         console.log("Loaded all books data:", allBooksData);
         console.log("Total books loaded:", booksData.length);
-        console.log("Total all books loaded:", allBooksData.length);
+        console.log("Total all books loaded:", allBooksData ? allBooksData.length : "null/undefined");
+        
+        // Debug: Check rating in userBooks
+        console.log("Sample userBooks with ratings:", booksData.slice(0, 5).map((ub: any) => ({
+          book_id: ub.book_id,
+          book_title: ub.book?.title,
+          rating: ub.rating,
+          ratingType: typeof ub.rating
+        })));
+        
         setUserBooks(booksData);
         
-        // Convert all books to Book format
-        const convertedAllBooks: Book[] = allBooksData.map((book: any) => {
-          const authorName = book.authors && book.authors.length > 0
-            ? book.authors.map((a: any) => a.name).join(", ")
-            : book.author || "Unknown";
+        // Check if allBooksData is valid
+        if (!allBooksData) {
+          console.error("allBooksData is null or undefined");
+          setAllBooks([]);
+        } else if (!Array.isArray(allBooksData)) {
+          console.error("allBooksData is not an array:", allBooksData, typeof allBooksData);
+          setAllBooks([]);
+        } else if (allBooksData.length === 0) {
+          console.warn("allBooksData is empty array - no books in database");
+          setAllBooks([]);
+        } else {
+          // Create a map of userBooks by book_id for quick lookup
+          const userBooksMap = new Map<number, typeof booksData[0]>();
+          booksData.forEach((ub: any) => {
+            if (ub && ub.book_id) {
+              userBooksMap.set(ub.book_id, ub);
+            }
+          });
           
-          return {
-            id: book.id.toString(),
-            title: book.title,
-            author: authorName,
-            coverUrl: book.cover_url,
-            progress: 0, // All books don't have progress
-            rating: undefined,
-          };
-        });
-        setAllBooks(convertedAllBooks);
+          // Convert all books to Book format, merging with user data if available
+          const convertedAllBooks: Book[] = allBooksData
+            .filter((book: any) => book && book.id && book.title) // Filter out invalid books
+            .map((book: any) => {
+              const authorName = book.authors && book.authors.length > 0
+                ? book.authors.map((a: any) => a.name).join(", ")
+                : book.author || "Unknown";
+              
+              // Check if user has this book in their list
+              const userBook = userBooksMap.get(book.id);
+              
+              return {
+                id: book.id.toString(),
+                title: book.title,
+                author: authorName,
+                coverUrl: book.cover_url,
+                fileUrl: book.file_url,
+                progress: userBook ? (userBook.progress || 0) : 0,
+                // Keep rating as number if it exists, otherwise undefined (not 0)
+                rating: userBook && userBook.rating != null && userBook.rating !== undefined 
+                  ? Number(userBook.rating) 
+                  : undefined,
+                description: book.description,
+              };
+            });
+          console.log("Converted allBooks:", convertedAllBooks.length);
+          console.log("Sample books with ratings:", convertedAllBooks.slice(0, 5).map(b => ({
+            id: b.id,
+            title: b.title,
+            rating: b.rating,
+            ratingType: typeof b.rating
+          })));
+          setAllBooks(convertedAllBooks);
+        }
+        
         setGroups(groupsData);
         setChallenges(challengesData);
         setAuthors(authorsData);
       } catch (err) {
         console.error("Error loading data:", err);
-        setError(err instanceof Error ? err.message : "Không thể tải dữ liệu");
+        // Show error message if it's a server error
+        if (err instanceof Error) {
+          if (err.message.includes("timeout")) {
+            setError("Backend không phản hồi. Vui lòng kiểm tra backend có đang chạy không.");
+          } else if (err.message.includes("server") || err.message.includes("Lỗi server")) {
+            setError("Lỗi server. Vui lòng kiểm tra backend logs hoặc thử lại sau.");
+          } else {
+            setError(err.message);
+          }
+        } else {
+          setError("Không thể tải dữ liệu. Vui lòng thử lại.");
+        }
       } finally {
         setLoading(false);
       }
@@ -189,10 +334,56 @@ const App = () => {
   const handleReviewSave = async (bookId: string, rating: number, review: string) => {
     try {
       await createReview(parseInt(bookId), rating, review);
-      // Reload books to get updated review
+      // Wait a bit to ensure backend has updated user_books
+      await new Promise(resolve => setTimeout(resolve, 300));
+      // Reload books to get updated rating
       try {
-        const updatedBooks = await getMyBooks();
+        const [updatedBooks, updatedAllBooks] = await Promise.all([
+          getMyBooks(),
+          getBooks()
+        ]);
         setUserBooks(updatedBooks);
+        
+        // Update allBooks with new rating from userBooks
+        if (Array.isArray(updatedAllBooks)) {
+          const userBooksMap = new Map<number, typeof updatedBooks[0]>();
+          updatedBooks.forEach((ub: any) => {
+            if (ub && ub.book_id) {
+              userBooksMap.set(ub.book_id, ub);
+            }
+          });
+          
+          const updatedConvertedAllBooks: Book[] = updatedAllBooks.map((book: any) => {
+            const authorName = book.authors && book.authors.length > 0
+              ? book.authors.map((a: any) => a.name).join(", ")
+              : book.author || "Unknown";
+            
+            const userBook = userBooksMap.get(book.id);
+            
+            return {
+              id: book.id.toString(),
+              title: book.title,
+              author: authorName,
+              coverUrl: book.cover_url,
+              fileUrl: book.file_url,
+              progress: userBook ? (userBook.progress || 0) : 0,
+              // Keep rating as number if it exists, otherwise undefined (not 0)
+              rating: userBook && userBook.rating != null && userBook.rating !== undefined 
+                ? Number(userBook.rating) 
+                : undefined,
+              description: book.description,
+            };
+          });
+          console.log("Updated allBooks after review save - Sample ratings:", updatedConvertedAllBooks.slice(0, 5).map(b => ({
+            id: b.id,
+            title: b.title,
+            rating: b.rating
+          })));
+          setAllBooks(updatedConvertedAllBooks);
+          // books will be automatically updated via useMemo when userBooks changes
+        }
+        
+        console.log("Books reloaded after review save, rating should be updated");
       } catch (reloadErr) {
         console.error("Error reloading books:", reloadErr);
         // Don't throw, just log - review was saved successfully
@@ -255,8 +446,19 @@ const App = () => {
 
   if (error) {
     return (
-      <div className="app-shell-dark" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
-        <div style={{ color: "#fca5a5", fontSize: "18px" }}>Lỗi: {error}</div>
+      <div className="app-shell-dark" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: "20px" }}>
+        <div style={{ color: "#fca5a5", fontSize: "18px", marginBottom: "16px", textAlign: "center" }}>⚠️ Lỗi: {error}</div>
+        <div style={{ color: "#94a3b8", fontSize: "14px", textAlign: "center", maxWidth: "600px" }}>
+          <p style={{ marginBottom: "12px" }}>Có thể do:</p>
+          <ul style={{ textAlign: "left", listStyle: "disc", paddingLeft: "20px" }}>
+            <li>Backend không đang chạy - Kiểm tra terminal backend</li>
+            <li>Database không kết nối được - Kiểm tra PostgreSQL</li>
+            <li>Database chưa có dữ liệu - Chạy script insert dữ liệu</li>
+          </ul>
+          <p style={{ marginTop: "16px" }}>
+            <strong>Giải pháp:</strong> Mở terminal backend và kiểm tra logs để xem lỗi chi tiết.
+          </p>
+        </div>
       </div>
     );
   }
@@ -317,6 +519,14 @@ const App = () => {
               }
             />
             <Route
+              path="/reading"
+              element={
+                <ProtectedRoute>
+                  <ReadingPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/recommendations"
               element={
                 <ProtectedRoute>
@@ -335,6 +545,14 @@ const App = () => {
                       setGroups(updatedGroups);
                     }}
                   />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/groups/:id"
+              element={
+                <ProtectedRoute>
+                  <GroupDetailPage />
                 </ProtectedRoute>
               }
             />

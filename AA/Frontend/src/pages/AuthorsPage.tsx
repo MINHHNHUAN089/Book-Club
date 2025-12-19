@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
+import Footer from "../components/Footer";
 import { Author } from "../api/backend";
 import { followAuthor, unfollowAuthor, getFollowedAuthors } from "../api/backend";
 
@@ -74,7 +75,6 @@ const AuthorsPage = ({ authors }: AuthorsPageProps) => {
           <Navigation />
         </div>
         <div className="header-actions">
-          <button className="primary-btn" onClick={() => navigate("/discover")}>+ Thêm sách</button>
           <div 
             className="avatar" 
             aria-label="User avatar"
@@ -230,6 +230,8 @@ const AuthorsPage = ({ authors }: AuthorsPageProps) => {
         </div>
         )}
       </main>
+      
+      <Footer />
     </div>
   );
 };

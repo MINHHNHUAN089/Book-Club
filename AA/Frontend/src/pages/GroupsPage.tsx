@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
+import Footer from "../components/Footer";
 import { Group, createGroup, joinGroup, leaveGroup, getMyGroups } from "../api/backend";
 
 interface GroupsPageProps {
@@ -107,7 +108,6 @@ const GroupsPage = ({ groups, onGroupCreated }: GroupsPageProps) => {
           <Navigation />
         </div>
         <div className="header-actions">
-          <button className="primary-btn" onClick={() => navigate("/discover")}>+ Thêm sách</button>
           <button className="primary-btn" onClick={() => setShowCreateModal(true)}>+ Tạo Câu lạc bộ</button>
           <div 
             className="avatar" 
@@ -176,7 +176,12 @@ const GroupsPage = ({ groups, onGroupCreated }: GroupsPageProps) => {
       ) : (
         <div className="groups-grid">
           {sortedGroups.map((group) => (
-          <div key={group.id} className="groups-club-card">
+          <div 
+            key={group.id} 
+            className="groups-club-card"
+            onClick={() => navigate(`/groups/${group.id}`)}
+            style={{ cursor: "pointer" }}
+          >
             <div
               className="groups-club-cover"
               style={{
@@ -195,7 +200,8 @@ const GroupsPage = ({ groups, onGroupCreated }: GroupsPageProps) => {
               {isMember(typeof group.id === 'number' ? group.id : Number(group.id)) ? (
                 <button
                   className="groups-club-leave-btn"
-                  onClick={async () => {
+                  onClick={async (e) => {
+                    e.stopPropagation();
                     if (!confirm("Bạn có chắc chắn muốn rời câu lạc bộ này?")) {
                       return;
                     }
@@ -219,7 +225,8 @@ const GroupsPage = ({ groups, onGroupCreated }: GroupsPageProps) => {
               ) : (
                 <button
                   className="groups-club-join-btn"
-                  onClick={async () => {
+                  onClick={async (e) => {
+                    e.stopPropagation();
                     try {
                       const groupId = typeof group.id === 'number' ? group.id : Number(group.id);
                       await joinGroup(groupId);
@@ -375,6 +382,8 @@ const GroupsPage = ({ groups, onGroupCreated }: GroupsPageProps) => {
           </div>
         </div>
       )}
+      
+      <Footer />
     </div>
   );
 };

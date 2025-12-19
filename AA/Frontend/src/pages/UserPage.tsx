@@ -1,15 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
-import { getCurrentUser, logout, User, getMyBooks, UserBook, updateBookProgress, updateUser, changePassword } from "../api/backend";
-import BookList from "../components/BookList";
+import Footer from "../components/Footer";
+import { getCurrentUser, logout, User, getMyBooks, UserBook, updateUser, changePassword } from "../api/backend";
 
 const UserPage = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [userBooks, setUserBooks] = useState<UserBook[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"overview" | "books" | "settings">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "settings">("overview");
   const [editMode, setEditMode] = useState(false);
   const [editData, setEditData] = useState({ name: "", email: "" });
   const [passwordData, setPasswordData] = useState({ current: "", new: "", confirm: "" });
@@ -45,16 +45,47 @@ const UserPage = () => {
     }
   };
 
-  // Calculate statistics
-  const stats = {
-    totalBooks: userBooks.length,
-    reading: userBooks.filter((b) => b.status === "reading").length,
-    wantToRead: userBooks.filter((b) => b.status === "want_to_read").length,
-    completed: userBooks.filter((b) => b.status === "completed").length,
-    avgProgress: userBooks.length > 0
-      ? Math.round(userBooks.reduce((sum, b) => sum + b.progress, 0) / userBooks.length)
-      : 0,
-  };
+  // Calculate statistics based on actual progress (more reliable than status)
+  const stats = useMemo(() => {
+    const total = userBooks.length;
+    const reading = userBooks.filter((b) => {
+      const progress = b.progress || 0;
+      return progress > 0 && progress < 100;
+    }).length;
+    const wantToRead = userBooks.filter((b) => {
+      const progress = b.progress || 0;
+      return progress === 0;
+    }).length;
+    const completed = userBooks.filter((b) => {
+      const progress = b.progress || 0;
+      return progress === 100;
+    }).length;
+    const avgProgress = total > 0
+      ? Math.round(userBooks.reduce((sum, b) => sum + (b.progress || 0), 0) / total)
+      : 0;
+
+    // Debug log
+    console.log("UserPage Stats:", {
+      total,
+      reading,
+      wantToRead,
+      completed,
+      avgProgress,
+      userBooksSample: userBooks.slice(0, 3).map(b => ({
+        id: b.book_id,
+        progress: b.progress,
+        status: b.status
+      }))
+    });
+
+    return {
+      totalBooks: total,
+      reading,
+      wantToRead,
+      completed,
+      avgProgress,
+    };
+  }, [userBooks]);
 
   if (loading) {
     return (
@@ -83,9 +114,6 @@ const UserPage = () => {
           <Navigation />
         </div>
         <div className="header-actions">
-          <button className="primary-btn" onClick={() => navigate("/discover")}>
-            + Thêm sách
-          </button>
           <div className="avatar" aria-label="User avatar" />
         </div>
       </header>
@@ -110,13 +138,6 @@ const UserPage = () => {
             type="button"
           >
             Tổng quan
-          </button>
-          <button
-            className={`user-tab ${activeTab === "books" ? "active" : ""}`}
-            onClick={() => setActiveTab("books")}
-            type="button"
-          >
-            Sách của tôi ({stats.totalBooks})
           </button>
           <button
             className={`user-tab ${activeTab === "settings" ? "active" : ""}`}
@@ -153,59 +174,6 @@ const UserPage = () => {
                   <div className="user-stat-label">Đã hoàn thành</div>
                 </div>
               </div>
-              <div className="user-progress-card">
-                <h3 className="user-progress-title">Tiến độ đọc trung bình</h3>
-                <div className="user-progress-bar">
-                  <div
-                    className="user-progress-fill"
-                    style={{ width: `${stats.avgProgress}%` }}
-                  />
-                </div>
-                <p className="user-progress-text">{stats.avgProgress}%</p>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "books" && (
-            <div className="user-books">
-              {userBooks.length === 0 ? (
-                <div className="user-empty-state">
-                  <div style={{ fontSize: "64px", marginBottom: "24px" }}>📚</div>
-                  <h3 style={{ color: "#e2e8f0", fontSize: "24px", fontWeight: 700, margin: "0 0 12px" }}>
-                    Chưa có sách nào
-                  </h3>
-                  <p style={{ color: "#94a3b8", fontSize: "16px", margin: "0 0 32px" }}>
-                    Thêm sách đầu tiên của bạn để bắt đầu theo dõi
-                  </p>
-                  <button className="primary-btn" onClick={() => navigate("/discover")}>
-                    + Thêm sách
-                  </button>
-                </div>
-              ) : (
-                <BookList
-                  books={userBooks.map((ub) => ({
-                    id: ub.book_id.toString(),
-                    title: ub.book.title,
-                    author: ub.book.author || "Unknown",
-                    coverUrl: ub.book.cover_url,
-                    progress: ub.progress,
-                    rating: ub.rating,
-                  }))}
-                  onUpdateProgress={async (bookId, progress) => {
-                    try {
-                      const userBook = userBooks.find((ub) => ub.book_id.toString() === bookId);
-                      if (!userBook) return;
-
-                      const updated = await updateBookProgress(userBook.id, progress);
-                      setUserBooks((prev) => prev.map((ub) => (ub.id === userBook.id ? updated : ub)));
-                    } catch (err) {
-                      console.error("Error updating progress:", err);
-                      alert(err instanceof Error ? err.message : "Không thể cập nhật tiến độ");
-                    }
-                  }}
-                  onSelect={(book) => navigate(`/review?bookId=${book.id}`)}
-                />
-              )}
             </div>
           )}
 
@@ -359,6 +327,8 @@ const UserPage = () => {
           )}
         </div>
       </main>
+      
+      <Footer />
     </div>
   );
 };

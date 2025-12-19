@@ -13,7 +13,11 @@ router = APIRouter(prefix="/api/upload", tags=["upload"])
 UPLOAD_DIR = Path(__file__).parent.parent.parent / "static" / "images" / "books"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-# Base URL cho ảnh
+# Tạo thư mục static/files/books nếu chưa có
+FILES_DIR = Path(__file__).parent.parent.parent / "static" / "files" / "books"
+FILES_DIR.mkdir(parents=True, exist_ok=True)
+
+# Base URL cho ảnh và file
 BASE_URL = "http://localhost:8000"
 
 
@@ -65,6 +69,64 @@ async def upload_book_cover(
             content={
                 "message": "Upload thành công",
                 "url": image_url,
+                "filename": file_name
+            }
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Lỗi khi lưu file: {str(e)}"
+        )
+
+
+@router.post("/book-file")
+async def upload_book_file(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Upload file sách (PDF, EPUB, etc.)
+    
+    - **file**: File sách (pdf, epub, mobi, txt)
+    - Trả về URL của file đã upload
+    """
+    # Kiểm tra định dạng file
+    allowed_extensions = {".pdf", ".epub", ".mobi", ".txt", ".doc", ".docx"}
+    file_ext = Path(file.filename).suffix.lower()
+    
+    if file_ext not in allowed_extensions:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Định dạng file không hợp lệ. Chỉ chấp nhận: {', '.join(allowed_extensions)}"
+        )
+    
+    # Kiểm tra kích thước file (tối đa 50MB)
+    contents = await file.read()
+    if len(contents) > 50 * 1024 * 1024:  # 50MB
+        raise HTTPException(
+            status_code=400,
+            detail="File quá lớn. Kích thước tối đa: 50MB"
+        )
+    
+    # Tạo tên file unique
+    import uuid
+    file_id = str(uuid.uuid4())
+    file_name = f"{file_id}{file_ext}"
+    file_path = FILES_DIR / file_name
+    
+    # Lưu file
+    try:
+        with open(file_path, "wb") as buffer:
+            buffer.write(contents)
+        
+        # Tạo URL
+        file_url = f"{BASE_URL}/static/files/books/{file_name}"
+        
+        return JSONResponse(
+            status_code=200,
+            content={
+                "message": "Upload file thành công",
+                "url": file_url,
                 "filename": file_name
             }
         )

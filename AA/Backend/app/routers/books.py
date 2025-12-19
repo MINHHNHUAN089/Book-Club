@@ -20,19 +20,25 @@ def get_books(
     """Get all books with optional search"""
     from sqlalchemy.orm import joinedload
     
-    query = db.query(Book)
-    
-    if search:
-        query = query.filter(
-            or_(
-                Book.title.ilike(f"%{search}%"),
-                Book.description.ilike(f"%{search}%")
+    try:
+        query = db.query(Book)
+        
+        if search:
+            query = query.filter(
+                or_(
+                    Book.title.ilike(f"%{search}%"),
+                    Book.description.ilike(f"%{search}%")
+                )
             )
-        )
-    
-    # Eager load authors to avoid N+1 queries
-    books = query.options(joinedload(Book.authors)).offset(skip).limit(limit).all()
-    return books
+        
+        # Eager load authors to avoid N+1 queries
+        books = query.options(joinedload(Book.authors)).offset(skip).limit(limit).all()
+        return books
+    except Exception as e:
+        import traceback
+        print(f"Error in get_books: {str(e)}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Lỗi khi lấy danh sách sách: {str(e)}")
 
 
 @router.get("/{book_id}", response_model=BookResponse)
@@ -51,16 +57,30 @@ def update_book(
     book_data: BookUpdate,
     db: Session = Depends(get_db)
 ):
-    """Update a book (e.g., cover_url)"""
+    """Update a book (e.g., cover_url, authors)"""
     from sqlalchemy.orm import joinedload
     book = db.query(Book).options(joinedload(Book.authors)).filter(Book.id == book_id).first()
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
     
     # Update only provided fields
-    update_data = book_data.model_dump(exclude_unset=True)
+    update_data = book_data.model_dump(exclude_unset=True, exclude={"author_names"})
     for field, value in update_data.items():
         setattr(book, field, value)
+    
+    # Update authors if provided
+    if book_data.author_names is not None:
+        # Clear existing authors
+        book.authors.clear()
+        # Add new authors
+        for author_name in book_data.author_names:
+            if author_name.strip():
+                author = db.query(Author).filter(Author.name == author_name.strip()).first()
+                if not author:
+                    author = Author(name=author_name.strip())
+                    db.add(author)
+                    db.flush()
+                book.authors.append(author)
     
     db.commit()
     db.refresh(book)

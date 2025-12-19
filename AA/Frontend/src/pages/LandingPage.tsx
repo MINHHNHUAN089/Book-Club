@@ -1,6 +1,45 @@
 import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import Footer from "../components/Footer";
+import { getBooks } from "../api/backend";
+import { Book } from "../types";
 
 const LandingPage = () => {
+  const [books, setBooks] = useState<Book[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadBooks = async () => {
+      try {
+        const booksData = await getBooks();
+        // Convert to Book format
+        const convertedBooks: Book[] = booksData
+          .filter((book: any) => book && book.id && book.title)
+          .map((book: any) => {
+            const authorName = book.authors && book.authors.length > 0
+              ? book.authors.map((a: any) => a.name).join(", ")
+              : book.author || "Unknown";
+            
+            return {
+              id: book.id.toString(),
+              title: book.title,
+              author: authorName,
+              coverUrl: book.cover_url,
+              fileUrl: book.file_url,
+              progress: 0,
+              description: book.description,
+            };
+          });
+        setBooks(convertedBooks.slice(0, 12)); // Show first 12 books
+        console.log("LandingPage: Loaded", convertedBooks.length, "books");
+      } catch (err) {
+        console.error("Error loading books for landing page:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadBooks();
+  }, []);
   return (
     <div className="dark-page" style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)" }}>
       {/* Header */}
@@ -104,6 +143,106 @@ const LandingPage = () => {
             </div>
           </div>
 
+          {/* Popular Books Section */}
+          {!loading && books.length > 0 && (
+            <div style={{ marginTop: "80px", marginBottom: "80px" }}>
+              <h2 style={{ 
+                color: "#e2e8f0", 
+                fontSize: "36px", 
+                fontWeight: 700, 
+                margin: "0 0 32px",
+                textAlign: "center"
+              }}>
+                Sách phổ biến
+              </h2>
+              <div style={{ 
+                display: "grid", 
+                gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", 
+                gap: "24px",
+                maxWidth: "1200px",
+                margin: "0 auto"
+              }}>
+                {books.map((book) => (
+                  <Link
+                    key={book.id}
+                    to={`/review?bookId=${book.id}`}
+                    style={{
+                      textDecoration: "none",
+                      color: "inherit"
+                    }}
+                  >
+                    <div style={{
+                      background: "rgba(255, 255, 255, 0.05)",
+                      border: "1px solid rgba(255, 255, 255, 0.1)",
+                      borderRadius: "12px",
+                      padding: "16px",
+                      transition: "transform 0.2s, box-shadow 0.2s",
+                      cursor: "pointer"
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = "translateY(-4px)";
+                      e.currentTarget.style.boxShadow = "0 8px 24px rgba(0, 0, 0, 0.3)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.boxShadow = "none";
+                    }}
+                    >
+                      {book.coverUrl ? (
+                        <img 
+                          src={book.coverUrl} 
+                          alt={book.title}
+                          style={{
+                            width: "100%",
+                            height: "280px",
+                            objectFit: "cover",
+                            borderRadius: "8px",
+                            marginBottom: "12px"
+                          }}
+                        />
+                      ) : (
+                        <div style={{
+                          width: "100%",
+                          height: "280px",
+                          background: "rgba(255, 255, 255, 0.1)",
+                          borderRadius: "8px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "48px",
+                          marginBottom: "12px"
+                        }}>
+                          📚
+                        </div>
+                      )}
+                      <h3 style={{ 
+                        color: "#e2e8f0", 
+                        fontSize: "16px", 
+                        fontWeight: 600, 
+                        margin: "0 0 4px",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap"
+                      }}>
+                        {book.title}
+                      </h3>
+                      <p style={{ 
+                        color: "#94a3b8", 
+                        fontSize: "14px", 
+                        margin: 0,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap"
+                      }}>
+                        {book.author}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Features */}
           <div style={{ 
             display: "grid", 
@@ -161,6 +300,8 @@ const LandingPage = () => {
           </div>
         </div>
       </main>
+      
+      <Footer />
     </div>
   );
 };

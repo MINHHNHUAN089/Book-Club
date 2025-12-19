@@ -1,8 +1,8 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.database import get_db
-from app.models import Review, Book, User
+from app.models import Review, Book, User, UserBook
 from app.schemas import ReviewCreate, ReviewResponse, ReviewUpdate
 from app.auth import get_current_active_user
 
@@ -18,7 +18,7 @@ def get_reviews(
     db: Session = Depends(get_db)
 ):
     """Get reviews with optional filters"""
-    query = db.query(Review)
+    query = db.query(Review).options(joinedload(Review.user), joinedload(Review.book))
     
     if book_id:
         query = query.filter(Review.book_id == book_id)
@@ -33,9 +33,10 @@ def get_reviews(
 @router.get("/{review_id}", response_model=ReviewResponse)
 def get_review(review_id: int, db: Session = Depends(get_db)):
     """Get a specific review by ID"""
-    review = db.query(Review).filter(Review.id == review_id).first()
+    review = db.query(Review).options(joinedload(Review.user), joinedload(Review.book)).filter(Review.id == review_id).first()
     if not review:
         raise HTTPException(status_code=404, detail="Review not found")
+    
     return review
 
 
@@ -51,14 +52,7 @@ def create_review(
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
     
-    # Check if user already reviewed this book
-    existing = db.query(Review).filter(
-        Review.user_id == current_user.id,
-        Review.book_id == review_data.book_id
-    ).first()
-    
-    if existing:
-        raise HTTPException(status_code=400, detail="You have already reviewed this book")
+    # Allow multiple reviews per book - removed the check for existing review
     
     # Create review
     review_dict = review_data.model_dump()
@@ -67,8 +61,34 @@ def create_review(
         **review_dict
     )
     db.add(db_review)
+    
+    # Update rating in user_books if the book is in user's list
+    # If book is not in user's list, add it first
+    user_book = db.query(UserBook).filter(
+        UserBook.user_id == current_user.id,
+        UserBook.book_id == review_data.book_id
+    ).first()
+    
+    if user_book:
+        # Update existing user_book with new rating
+        user_book.rating = review_data.rating
+        db.add(user_book)
+    else:
+        # Create new user_book entry if it doesn't exist
+        user_book = UserBook(
+            user_id=current_user.id,
+            book_id=review_data.book_id,
+            rating=review_data.rating,
+            status="want_to_read",
+            progress=0
+        )
+        db.add(user_book)
+    
     db.commit()
     db.refresh(db_review)
+    
+    # Reload with user relationship to get user name
+    db_review = db.query(Review).options(joinedload(Review.user), joinedload(Review.book)).filter(Review.id == db_review.id).first()
     return db_review
 
 
@@ -93,8 +113,22 @@ def update_review(
     for field, value in update_data.items():
         setattr(review, field, value)
     
+    # Update rating in user_books if rating was updated
+    if "rating" in update_data:
+        user_book = db.query(UserBook).filter(
+            UserBook.user_id == current_user.id,
+            UserBook.book_id == review.book_id
+        ).first()
+        
+        if user_book:
+            user_book.rating = update_data["rating"]
+            db.add(user_book)
+    
     db.commit()
     db.refresh(review)
+    
+    # Reload with user and book relationships
+    review = db.query(Review).options(joinedload(Review.user), joinedload(Review.book)).filter(Review.id == review.id).first()
     return review
 
 

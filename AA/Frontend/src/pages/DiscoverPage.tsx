@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
+import Footer from "../components/Footer";
 import { searchBooks, GoogleVolume } from "../api/googleBooks";
 
 interface DiscoverPageProps {
@@ -41,7 +42,6 @@ const DiscoverPage = ({ onImport }: DiscoverPageProps) => {
           <Navigation />
         </div>
         <div className="header-actions">
-          <button className="primary-btn">+ Thêm sách</button>
           <div 
             className="avatar" 
             aria-label="User avatar"
@@ -101,6 +101,8 @@ const DiscoverPage = ({ onImport }: DiscoverPageProps) => {
           ))}
         </div>
       </main>
+      
+      <Footer />
     </div>
   );
 };

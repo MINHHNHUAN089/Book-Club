@@ -73,6 +73,7 @@ class BookBase(BaseModel):
     title: str
     isbn: Optional[str] = None
     cover_url: Optional[str] = None
+    file_url: Optional[str] = None  # URL của file sách (PDF, EPUB, etc.)
     description: Optional[str] = None
     published_date: Optional[str] = None
     page_count: Optional[int] = None
@@ -87,10 +88,12 @@ class BookUpdate(BaseModel):
     title: Optional[str] = None
     isbn: Optional[str] = None
     cover_url: Optional[str] = None
+    file_url: Optional[str] = None  # URL của file sách (PDF, EPUB, etc.)
     description: Optional[str] = None
     published_date: Optional[str] = None
     page_count: Optional[int] = None
     google_books_id: Optional[str] = None
+    author_names: Optional[List[str]] = None
 
 
 class BookResponse(BookBase):

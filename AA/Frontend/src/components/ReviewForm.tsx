@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Book } from "../types";
-import { addBookToMyList, updateBookProgress, getBookReviews, Review } from "../api/backend";
+import { addBookToMyList, updateBookProgress, getBookReviews, Review, getCurrentUser, deleteReview } from "../api/backend";
 
 interface ReviewFormProps {
   book: Book | null;
@@ -42,30 +43,47 @@ const mockCommunity = [
 ];
 
 const ReviewForm = ({ book, userBookId, onSave, onBookAdded, onProgressUpdated }: ReviewFormProps) => {
+  const navigate = useNavigate();
   const [rating, setRating] = useState(book?.rating ?? 0);
   const [review, setReview] = useState(book?.review ?? "");
-  const [activeTab, setActiveTab] = useState<"description" | "details" | "community">("description");
+  const [activeTab, setActiveTab] = useState<"description" | "details" | "reading">("description");
   const [communityReviews, setCommunityReviews] = useState<Review[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
   const [isAddingBook, setIsAddingBook] = useState(false);
   const [isMarkingRead, setIsMarkingRead] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [deletingReviewId, setDeletingReviewId] = useState<number | null>(null);
 
   useEffect(() => {
     // Reset rating và review khi book thay đổi (theo book.id)
     if (book) {
+      // Update rating from book prop (this will sync with external rating)
       setRating(book.rating ?? 0);
-      setReview(book.review ?? "");
+      setReview(""); // Reset review text - will be loaded from reviews table
       setActiveTab("description");
       setCommunityReviews([]); // Reset reviews khi đổi sách
     }
-  }, [book?.id]); // Chỉ theo dõi book.id để tránh re-render không cần thiết
+  }, [book?.id, book?.rating]); // Also watch book.rating to sync when it changes
 
   const loadCommunityReviews = async () => {
     if (!book?.id) return;
     setLoadingReviews(true);
     try {
-      const reviews = await getBookReviews(parseInt(book.id));
+      const [reviews, currentUser] = await Promise.all([
+        getBookReviews(parseInt(book.id)),
+        getCurrentUser().catch(() => null) // Get current user, but don't fail if it errors
+      ]);
+      
+      // Store current user ID
+      if (currentUser) {
+        console.log("Current user ID:", currentUser.id);
+        setCurrentUserId(currentUser.id);
+      } else {
+        console.log("No current user found");
+        setCurrentUserId(null);
+      }
+      
       // Sắp xếp reviews theo thời gian mới nhất (created_at giảm dần)
       const sortedReviews = reviews.sort((a, b) => {
         const dateA = new Date(a.created_at).getTime();
@@ -73,6 +91,12 @@ const ReviewForm = ({ book, userBookId, onSave, onBookAdded, onProgressUpdated }
         return dateB - dateA; // Mới nhất trước
       });
       setCommunityReviews(sortedReviews);
+      
+      // Don't auto-load review text - allow user to create multiple reviews
+      // Only reset if review text is empty (when switching books)
+      if (!review) {
+        setReview("");
+      }
     } catch (err) {
       console.error("Error loading reviews:", err);
       setCommunityReviews([]);
@@ -81,22 +105,57 @@ const ReviewForm = ({ book, userBookId, onSave, onBookAdded, onProgressUpdated }
     }
   };
 
-  // Load community reviews when book changes
+  // Load community reviews when book changes (load immediately, not just when tab is active)
   useEffect(() => {
-    if (book?.id && activeTab === "community") {
+    if (book?.id) {
       loadCommunityReviews();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [book?.id, activeTab]);
+  }, [book?.id]);
 
+  // Calculate average rating from all reviews
   const avgRating = useMemo(() => {
     if (communityReviews.length > 0) {
       const total = communityReviews.reduce((sum, r) => sum + r.rating, 0);
-      return Math.max(0, Math.min(5, Number((total / communityReviews.length).toFixed(1))));
+      return total / communityReviews.length;
     }
-    if (!book?.rating) return 4.7;
-    return Math.max(0, Math.min(5, Number(book.rating.toFixed(1))));
+    // Fallback to book rating if no reviews yet
+    if (book?.rating) {
+      return book.rating;
+    }
+    return 0; // No rating yet
   }, [book, communityReviews]);
+
+  // Calculate rating distribution from real data
+  const ratingDistribution = useMemo(() => {
+    if (communityReviews.length === 0) {
+      return [
+        { label: "5 sao", count: 0, percentage: 0 },
+        { label: "4 sao", count: 0, percentage: 0 },
+        { label: "3 sao", count: 0, percentage: 0 },
+        { label: "2 sao", count: 0, percentage: 0 },
+        { label: "1 sao", count: 0, percentage: 0 },
+      ];
+    }
+
+    // Count reviews by rating
+    const counts: { [key: number]: number } = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    communityReviews.forEach((review) => {
+      if (review.rating >= 1 && review.rating <= 5) {
+        counts[review.rating as keyof typeof counts]++;
+      }
+    });
+
+    // Calculate percentages
+    const total = communityReviews.length;
+    return [
+      { label: "5 sao", count: counts[5], percentage: Math.round((counts[5] / total) * 100) },
+      { label: "4 sao", count: counts[4], percentage: Math.round((counts[4] / total) * 100) },
+      { label: "3 sao", count: counts[3], percentage: Math.round((counts[3] / total) * 100) },
+      { label: "2 sao", count: counts[2], percentage: Math.round((counts[2] / total) * 100) },
+      { label: "1 sao", count: counts[1], percentage: Math.round((counts[1] / total) * 100) },
+    ];
+  }, [communityReviews]);
 
   const handleAddToLibrary = async () => {
     if (!book?.id) return;
@@ -141,18 +200,38 @@ const ReviewForm = ({ book, userBookId, onSave, onBookAdded, onProgressUpdated }
       // Luôn reload reviews sau khi save thành công để hiển thị review mới
       try {
         await loadCommunityReviews();
-        // Tự động chuyển sang tab "community" để xem review mới
-        setActiveTab("community");
       } catch (reloadErr) {
         console.error("Error reloading reviews:", reloadErr);
         // Don't show error, review was saved successfully
       }
       alert("Đã gửi đánh giá thành công!");
+      // Clear review text after saving to allow new review
+      setReview("");
+      setRating(0); // Reset rating để có thể chọn lại
     } catch (err) {
       console.error("Error saving review:", err);
       alert(err instanceof Error ? err.message : "Không thể gửi đánh giá");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleDeleteReview = async (reviewId: number) => {
+    if (!confirm("Bạn có chắc chắn muốn xóa đánh giá này?")) {
+      return;
+    }
+    
+    setDeletingReviewId(reviewId);
+    try {
+      await deleteReview(reviewId);
+      // Reload reviews after deletion
+      await loadCommunityReviews();
+      alert("Đã xóa đánh giá thành công!");
+    } catch (err) {
+      console.error("Error deleting review:", err);
+      alert(err instanceof Error ? err.message : "Không thể xóa đánh giá");
+    } finally {
+      setDeletingReviewId(null);
     }
   };
 
@@ -184,15 +263,7 @@ const ReviewForm = ({ book, userBookId, onSave, onBookAdded, onProgressUpdated }
               <p className="detail-sub">Series: Sách của bạn</p>
             </div>
             <div className="detail-actions">
-              {!userBookId ? (
-                <button 
-                  className="primary-btn full" 
-                  onClick={handleAddToLibrary}
-                  disabled={isAddingBook}
-                >
-                  {isAddingBook ? "Đang thêm..." : "+ Thêm vào thư viện"}
-                </button>
-              ) : (
+              {userBookId && (
                 <button 
                   className="primary-btn full" 
                   disabled
@@ -238,11 +309,17 @@ const ReviewForm = ({ book, userBookId, onSave, onBookAdded, onProgressUpdated }
                 Chi tiết
               </button>
               <button 
-                className={`tab ${activeTab === "community" ? "active" : ""}`}
-                onClick={() => setActiveTab("community")}
+                className={`tab ${activeTab === "reading" ? "active" : ""}`}
+                onClick={() => {
+                  if (book?.fileUrl) {
+                    navigate(`/reading?bookId=${book.id}`);
+                  } else {
+                    setActiveTab("reading");
+                  }
+                }}
                 type="button"
               >
-                Cộng đồng
+                Đọc sách
               </button>
             </div>
             <div className="detail-desc">
@@ -264,35 +341,21 @@ const ReviewForm = ({ book, userBookId, onSave, onBookAdded, onProgressUpdated }
                   <p><strong>ID sách:</strong> {book.id}</p>
                 </div>
               )}
-              {activeTab === "community" && (
+              {activeTab === "reading" && (
                 <div>
-                  {loadingReviews ? (
-                    <p>Đang tải đánh giá...</p>
-                  ) : communityReviews.length === 0 ? (
-                    <p>Chưa có đánh giá từ cộng đồng cho cuốn sách này.</p>
-                  ) : (
-                    <div className="detail-community">
-                      {communityReviews.map((item) => (
-                        <div key={item.id} className="detail-review">
-                          <div className="detail-review-body">
-                            <div className="detail-review-top">
-                              <div>
-                                <p className="detail-review-name">Người dùng #{item.user_id}</p>
-                                <p className="detail-review-time">
-                                  {new Date(item.created_at).toLocaleDateString("vi-VN")}
-                                </p>
-                              </div>
-                              <div className="detail-review-stars">
-                                {Array.from({ length: 5 }).map((_, i) => (
-                                  <span key={i}>{i < item.rating ? "★" : "☆"}</span>
-                                ))}
-                              </div>
-                            </div>
-                            <p className="detail-review-text">{item.review_text || "Không có nội dung đánh giá."}</p>
-                          </div>
-                        </div>
-                      ))}
+                  {book?.fileUrl ? (
+                    <div style={{ textAlign: "center", padding: "20px" }}>
+                      <p>Nhấn vào nút "Đọc sách" ở trên để mở trang đọc sách.</p>
+                      <button
+                        className="primary-btn"
+                        onClick={() => navigate(`/reading?bookId=${book.id}`)}
+                        style={{ marginTop: "16px" }}
+                      >
+                        Mở trang đọc sách
+                      </button>
                     </div>
+                  ) : (
+                    <p>Chưa có file PDF cho cuốn sách này. Vui lòng liên hệ admin để thêm file.</p>
                   )}
                 </div>
               )}
@@ -305,18 +368,41 @@ const ReviewForm = ({ book, userBookId, onSave, onBookAdded, onProgressUpdated }
             <h3 className="detail-heading">Tổng quan xếp hạng</h3>
             <div className="rating-summary">
               <div className="rating-avg">
-                <div className="rating-score">{avgRating.toFixed(1)}</div>
-                <div className="rating-stars">{Array.from({ length: 5 }).map((_, i) => (i + 0.5 <= avgRating ? "★" : "☆"))}</div>
-                <div className="rating-count">~3,281 xếp hạng</div>
+                <div className="rating-score">
+                  {communityReviews.length > 0 ? avgRating.toFixed(1) : "—"}
+                </div>
+                <div className="rating-stars">
+                  {Array.from({ length: 5 }).map((_, i) => {
+                    const starValue = i + 1;
+                    const isFilled = starValue <= Math.floor(avgRating);
+                    const isHalfFilled = !isFilled && starValue - 0.5 <= avgRating;
+                    return (
+                      <span 
+                        key={i} 
+                        style={{ 
+                          color: isFilled || isHalfFilled ? "#fbbf24" : "#475569",
+                          opacity: isHalfFilled ? 0.7 : 1
+                        }}
+                      >
+                        {isFilled ? "★" : "☆"}
+                      </span>
+                    );
+                  })}
+                </div>
+                <div className="rating-count">
+                  {communityReviews.length > 0 
+                    ? `${communityReviews.length} xếp hạng`
+                    : "Chưa có xếp hạng"}
+                </div>
               </div>
               <div className="rating-bars">
-                {[["5 sao", 75], ["4 sao", 18], ["3 sao", 5], ["2 sao", 1], ["1 sao", 1]].map(([label, pct]) => (
+                {ratingDistribution.map(({ label, percentage }) => (
                   <div key={label} className="rating-row">
                     <span>{label}</span>
                     <div className="rating-bar">
-                      <div className="rating-fill" style={{ width: `${pct}%` }} />
+                      <div className="rating-fill" style={{ width: `${percentage}%` }} />
                     </div>
-                    <span className="rating-pct">{pct}%</span>
+                    <span className="rating-pct">{percentage}%</span>
                   </div>
                 ))}
               </div>
@@ -366,7 +452,7 @@ const ReviewForm = ({ book, userBookId, onSave, onBookAdded, onProgressUpdated }
         </div>
       </div>
 
-      {activeTab !== "community" && (
+      {activeTab !== "reading" && (
         <div className="detail-card">
           <div className="detail-list-header">
             <h3 className="detail-heading">Đánh giá từ cộng đồng ({communityReviews.length})</h3>
@@ -389,20 +475,67 @@ const ReviewForm = ({ book, userBookId, onSave, onBookAdded, onProgressUpdated }
             ) : communityReviews.length === 0 ? (
               <p style={{ color: "#94a3b8", textAlign: "center", padding: "20px" }}>Chưa có đánh giá từ cộng đồng.</p>
             ) : (
-              communityReviews.slice(0, 5).map((item) => (
+              communityReviews.map((item) => (
                 <div key={item.id} className="detail-review">
                   <div className="detail-review-body">
                     <div className="detail-review-top">
                       <div>
-                        <p className="detail-review-name">Người dùng #{item.user_id}</p>
+                        <p className="detail-review-name">
+                          {item.user?.name || item.user_name || `Người dùng #${item.user_id}`}
+                        </p>
                         <p className="detail-review-time">
                           {new Date(item.created_at).toLocaleDateString("vi-VN")}
                         </p>
                       </div>
-                      <div className="detail-review-stars">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <span key={i}>{i < item.rating ? "★" : "☆"}</span>
-                        ))}
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <div className="detail-review-stars">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <span key={i}>{i < item.rating ? "★" : "☆"}</span>
+                          ))}
+                        </div>
+                        {(() => {
+                          // Compare as numbers to handle type mismatches
+                          const reviewUserIdNum = Number(item.user_id);
+                          const currentUserIdNum = Number(currentUserId);
+                          const isMyReview = currentUserId && reviewUserIdNum === currentUserIdNum;
+                          
+                          // Log với JSON.stringify để xem đầy đủ
+                          if (currentUserId) {
+                            console.log(`Review ${item.id}:`, {
+                              reviewUserId: item.user_id,
+                              reviewUserIdNum: reviewUserIdNum,
+                              currentUserId: currentUserId,
+                              currentUserIdNum: currentUserIdNum,
+                              match: reviewUserIdNum === currentUserIdNum,
+                              isMyReview: isMyReview
+                            });
+                          }
+                          
+                          return isMyReview ? (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteReview(item.id);
+                              }}
+                              disabled={deletingReviewId === item.id}
+                              style={{
+                                padding: "4px 8px",
+                                fontSize: "12px",
+                                background: "rgba(239, 68, 68, 0.1)",
+                                color: "#fca5a5",
+                                border: "1px solid rgba(239, 68, 68, 0.3)",
+                                borderRadius: "6px",
+                                cursor: deletingReviewId === item.id ? "not-allowed" : "pointer",
+                                opacity: deletingReviewId === item.id ? 0.6 : 1,
+                                fontWeight: 600,
+                                minWidth: "60px"
+                              }}
+                              title="Xóa đánh giá này"
+                            >
+                              {deletingReviewId === item.id ? "Đang xóa..." : "✕ Xóa"}
+                            </button>
+                          ) : null;
+                        })()}
                       </div>
                     </div>
                     <p className="detail-review-text">{item.review_text || "Không có nội dung đánh giá."}</p>

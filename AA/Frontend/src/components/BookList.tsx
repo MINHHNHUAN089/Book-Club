@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { Book } from "../types";
 
 interface BookListProps {
@@ -6,19 +7,24 @@ interface BookListProps {
   onSelect: (book: Book) => void;
 }
 
-const getStatus = (progress: number) => {
-  if (progress >= 100) return "Đã đọc";
-  if (progress === 0) return "Muốn đọc";
-  return "Đang đọc";
-};
-
 const BookList = ({ books, onUpdateProgress, onSelect }: BookListProps) => {
+  const navigate = useNavigate();
+  
   const handleSelect = (book: Book) => {
     console.log("Book selected:", book);
     try {
       onSelect(book);
     } catch (error) {
       console.error("Error selecting book:", error);
+    }
+  };
+
+  const handleReadBook = (e: React.MouseEvent, book: Book) => {
+    e.stopPropagation();
+    if (book.fileUrl) {
+      navigate(`/reading?bookId=${book.id}`);
+    } else {
+      alert("Sách này chưa có file PDF. Vui lòng liên hệ admin để thêm file.");
     }
   };
 
@@ -57,21 +63,21 @@ const BookList = ({ books, onUpdateProgress, onSelect }: BookListProps) => {
               <p className="book-author">{book.author}</p>
             </div>
 
-            {onUpdateProgress && (
               <div className="book-progress">
                 <div className="book-progress-row">
                   <span>Tiến độ</span>
-                  <span>{book.progress}%</span>
+                <span>{book.progress || 0}%</span>
                 </div>
                 <div className="book-progress-bar">
-                  <div className="book-progress-fill" style={{ width: `${book.progress}%` }} />
-                </div>
+                <div className="book-progress-fill" style={{ width: `${book.progress || 0}%` }} />
               </div>
-            )}
+            </div>
 
             <div className="book-rating">
               {Array.from({ length: 5 }).map((_, idx) => {
-                const filled = (book.rating ?? 0) >= idx + 1;
+                // Rating should be a number between 0-5
+                const ratingValue = book.rating != null ? Number(book.rating) : 0;
+                const filled = ratingValue >= idx + 1;
                 return (
                   <span key={idx} className={filled ? "rating-star filled" : "rating-star"} aria-hidden>
                     ★
@@ -80,19 +86,29 @@ const BookList = ({ books, onUpdateProgress, onSelect }: BookListProps) => {
               })}
             </div>
 
-            {onUpdateProgress && <div className="book-status">{getStatus(book.progress)}</div>}
 
-            {onUpdateProgress && (
-              <div className="book-actions">
-                <input
-                  className="range"
-                  type="range"
-                  min={0}
-                  max={100}
-                  value={book.progress}
-                onChange={(e) => onUpdateProgress && onUpdateProgress(book.id, Number(e.target.value))}
-                onClick={(e) => e.stopPropagation()}
-              />
+            <div className="book-actions">
+              {onUpdateProgress && (
+                <>
+                  <input
+                    className="range"
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={book.progress}
+                    onChange={(e) => onUpdateProgress && onUpdateProgress(book.id, Number(e.target.value))}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </>
+              )}
+              <button
+                className={book.fileUrl ? "primary-btn" : "secondary-btn"}
+                onClick={(e) => handleReadBook(e, book)}
+                style={!book.fileUrl ? { opacity: 0.6, cursor: "not-allowed" } : {}}
+                title={book.fileUrl ? "Đọc sách" : "Sách này chưa có file PDF"}
+              >
+                {book.fileUrl ? "Đọc sách" : "Chưa có PDF"}
+              </button>
               <button
                 className="secondary-btn"
                 onClick={(e) => {
@@ -103,8 +119,7 @@ const BookList = ({ books, onUpdateProgress, onSelect }: BookListProps) => {
               >
                 Review
               </button>
-              </div>
-            )}
+            </div>
           </div>
         </div>
       ))}

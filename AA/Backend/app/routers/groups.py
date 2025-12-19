@@ -18,19 +18,25 @@ def get_groups(
     db: Session = Depends(get_db)
 ):
     """Get all groups with optional search"""
-    query = db.query(Group)
-    
-    if search:
-        query = query.filter(
-            or_(
-                Group.name.ilike(f"%{search}%"),
-                Group.description.ilike(f"%{search}%"),
-                Group.topic.ilike(f"%{search}%")
+    try:
+        query = db.query(Group)
+        
+        if search:
+            query = query.filter(
+                or_(
+                    Group.name.ilike(f"%{search}%"),
+                    Group.description.ilike(f"%{search}%"),
+                    Group.topic.ilike(f"%{search}%")
+                )
             )
-        )
-    
-    groups = query.offset(skip).limit(limit).all()
-    return groups
+        
+        groups = query.offset(skip).limit(limit).all()
+        return groups
+    except Exception as e:
+        import traceback
+        print(f"Error in get_groups: {str(e)}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Lỗi khi lấy danh sách câu lạc bộ: {str(e)}")
 
 
 @router.get("/{group_id}", response_model=GroupResponse)

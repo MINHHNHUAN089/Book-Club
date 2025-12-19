@@ -5,11 +5,13 @@ export interface Book {
   title: string;
   author: string;
   coverUrl?: string;
+  fileUrl?: string;
   progress: number;
   rating?: number;
   review?: string;
   clubGroupIds?: string[];
   challengeIds?: string[];
+  description?: string;
 }
 
 export interface ClubGroup {

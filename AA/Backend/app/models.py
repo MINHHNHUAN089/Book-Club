@@ -63,6 +63,7 @@ class Book(Base):
     title = Column(String(255), nullable=False, index=True)
     isbn = Column(String(20), unique=True, nullable=True, index=True)
     cover_url = Column(String(500), nullable=True)
+    file_url = Column(String(500), nullable=True)  # URL của file sách (PDF, EPUB, etc.)
     description = Column(Text, nullable=True)
     published_date = Column(String(50), nullable=True)
     page_count = Column(Integer, nullable=True)

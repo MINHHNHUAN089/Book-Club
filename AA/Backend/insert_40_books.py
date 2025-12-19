@@ -3,6 +3,11 @@ Script để thêm 40 cuốn sách vào database
 Chạy: python insert_40_books.py
 """
 import sys
+import io
+# Set UTF-8 encoding for output
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
 from app.database import SessionLocal
 from app.models import Book, Author, User
 from app.auth import get_password_hash
@@ -56,10 +61,10 @@ def insert_40_books():
     """Insert 40 books into database"""
     db = SessionLocal()
     try:
-        print("📚 Bắt đầu thêm 40 cuốn sách...\n")
+        print("Bat dau them 40 cuon sach...\n")
         
         # Tạo users mẫu nếu chưa có
-        print("👥 Tạo users mẫu...")
+        print("Tao users mau...")
         users_data = [
             ('Nguyễn Văn Admin', 'admin@library.com', 'password123'),
             ('Trần Thị Hoa', 'hoa@example.com', 'password123'),
@@ -80,12 +85,12 @@ def insert_40_books():
                     is_active=True
                 )
                 db.add(user)
-                print(f"  ✅ Tạo user: {name} ({email})")
+                print(f"  [OK] Tao user: {name} ({email})")
             else:
-                print(f"  ℹ️  User đã có: {name}")
+                print(f"  [INFO] User da co: {name}")
         
         db.commit()
-        print(f"\n📖 Thêm sách...\n")
+        print(f"\nThem sach...\n")
         
         books_created = 0
         authors_created = 0
@@ -96,7 +101,7 @@ def insert_40_books():
             # Kiểm tra sách đã tồn tại chưa
             existing_book = db.query(Book).filter(Book.title == title).first()
             if existing_book:
-                print(f"  ℹ️  Đã có: {title}")
+                print(f"  [INFO] Da co: {title}")
                 continue
             
             # Tìm hoặc tạo author
@@ -106,19 +111,15 @@ def insert_40_books():
                 db.add(author)
                 db.flush()
                 authors_created += 1
-                print(f"  ✅ Tạo author: {author_name}")
+                print(f"  [OK] Tao author: {author_name}")
             
             # Tạo book
             book = Book(
                 title=title,
-                publisher=publisher,
-                publication_year=year,
                 description=description,
-                cover_url=f"/static/images/books/{cover_image}" if cover_image else None,
-                total_pages=pages,
-                country=country,
-                average_rating=rating,
-                total_reviews=reviews,
+                cover_url=f"http://localhost:8000/static/images/books/{cover_image}" if cover_image else None,
+                published_date=str(year) if year > 0 else None,
+                page_count=pages,
             )
             
             # Link author to book
@@ -126,17 +127,17 @@ def insert_40_books():
             
             db.add(book)
             books_created += 1
-            print(f"  ✅ Tạo sách: {title}")
+            print(f"  [OK] Tao sach: {title}")
         
         db.commit()
         
-        print(f"\n📊 KẾT QUẢ:")
-        print(f"   ✅ Đã tạo {books_created} cuốn sách mới")
-        print(f"   ✅ Đã tạo {authors_created} tác giả mới")
-        print(f"   ✅ Tổng cộng: {len(BOOKS_DATA)} cuốn sách trong database")
+        print(f"\nKET QUA:")
+        print(f"   [OK] Da tao {books_created} cuon sach moi")
+        print(f"   [OK] Da tao {authors_created} tac gia moi")
+        print(f"   [OK] Tong cong: {len(BOOKS_DATA)} cuon sach trong database")
         
     except Exception as e:
-        print(f"❌ Lỗi: {e}")
+        print(f"[ERROR] Loi: {e}")
         db.rollback()
         import traceback
         traceback.print_exc()

@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
+import Footer from "../components/Footer";
 import { Book, Challenge } from "../types";
 
 interface RecommendationsPageProps {
@@ -74,7 +75,6 @@ const RecommendationsPage = ({ books, allBooks = [], onAddBook }: Recommendation
           <Navigation />
         </div>
         <div className="header-actions">
-          <button className="primary-btn" onClick={() => navigate("/discover")}>+ Thêm sách</button>
           <div 
             className="avatar" 
             aria-label="User avatar"
@@ -116,27 +116,44 @@ const RecommendationsPage = ({ books, allBooks = [], onAddBook }: Recommendation
                 <div 
                   key={book.id} 
                   className="discover-recommend-card"
-                  onClick={() => navigate(`/review?bookId=${book.id}`)}
                   style={{ cursor: "pointer" }}
                 >
                   <div
                     className="discover-book-cover-large"
                     style={{ backgroundImage: `url(${book.coverUrl || "https://via.placeholder.com/240x320"})` }}
+                    onClick={() => navigate(`/review?bookId=${book.id}`)}
                   />
                   <div className="discover-card-content">
                     <div>
                       <p className="discover-book-title">{book.title}</p>
                       <p className="discover-book-author">{book.author}</p>
                     </div>
-                    <button
-                      className="discover-add-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAddBook(book);
-                      }}
-                    >
-                      Add to list
-                    </button>
+                    <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
+                      <button
+                        className={book.fileUrl ? "primary-btn" : "secondary-btn"}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (book.fileUrl) {
+                            navigate(`/reading?bookId=${book.id}`);
+                          } else {
+                            alert("Sách này chưa có file PDF. Vui lòng liên hệ admin để thêm file.");
+                          }
+                        }}
+                        style={!book.fileUrl ? { opacity: 0.6, cursor: "not-allowed" } : {}}
+                        title={book.fileUrl ? "Đọc sách" : "Sách này chưa có file PDF"}
+                      >
+                        {book.fileUrl ? "Đọc sách" : "Chưa có PDF"}
+                      </button>
+                      <button
+                        className="secondary-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/review?bookId=${book.id}`);
+                        }}
+                      >
+                        Review
+                      </button>
+                    </div>
                   </div>
                 </div>
                 ))
@@ -154,16 +171,47 @@ const RecommendationsPage = ({ books, allBooks = [], onAddBook }: Recommendation
                 <div 
                   key={book.id} 
                   className="discover-popular-card"
-                  onClick={() => navigate(`/review?bookId=${book.id}`)}
                   style={{ cursor: "pointer" }}
                 >
                   <div
                     className="discover-book-cover-small"
                     style={{ backgroundImage: `url(${book.coverUrl || "https://via.placeholder.com/160x213"})` }}
+                    onClick={() => navigate(`/review?bookId=${book.id}`)}
                   />
                   <div>
                     <p className="discover-book-title-small">{book.title}</p>
                     <p className="discover-book-author-small">{book.author}</p>
+                    <div style={{ display: "flex", gap: "6px", marginTop: "8px", flexWrap: "wrap" }}>
+                      <button
+                        className={book.fileUrl ? "primary-btn" : "secondary-btn"}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (book.fileUrl) {
+                            navigate(`/reading?bookId=${book.id}`);
+                          } else {
+                            alert("Sách này chưa có file PDF. Vui lòng liên hệ admin để thêm file.");
+                          }
+                        }}
+                        style={{
+                          fontSize: "12px",
+                          padding: "6px 12px",
+                          ...(!book.fileUrl ? { opacity: 0.6, cursor: "not-allowed" } : {})
+                        }}
+                        title={book.fileUrl ? "Đọc sách" : "Sách này chưa có file PDF"}
+                      >
+                        {book.fileUrl ? "Đọc" : "Chưa có PDF"}
+                      </button>
+                      <button
+                        className="secondary-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/review?bookId=${book.id}`);
+                        }}
+                        style={{ fontSize: "12px", padding: "6px 12px" }}
+                      >
+                        Review
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -203,6 +251,8 @@ const RecommendationsPage = ({ books, allBooks = [], onAddBook }: Recommendation
           </div>
         </section>
       </main>
+      
+      <Footer />
     </div>
   );
 };

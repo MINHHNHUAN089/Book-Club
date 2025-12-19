@@ -181,6 +181,7 @@ export interface Book {
   author?: string;
   description?: string;
   cover_url?: string;
+  file_url?: string;
   isbn?: string;
   page_count?: number;
   published_date?: string;
@@ -197,13 +198,37 @@ export interface UserBook {
   book: Book;
 }
 
-export async function getBooks(): Promise<Book[]> {
-  const response = await fetch(`${API_BASE_URL}/books`, {
+export async function getBook(bookId: number): Promise<Book> {
+  const response = await fetch(`${API_BASE_URL}/books/${bookId}`, {
     method: "GET",
-    headers: getHeaders(true),
+    headers: getHeaders(false),
   });
 
   if (!response.ok) {
+    const errorText = await response.text();
+    console.error("getBook error:", response.status, errorText);
+    throw new Error(`Lỗi khi lấy thông tin sách: ${response.status}`);
+  }
+
+  return await response.json();
+}
+
+export async function getBooks(): Promise<Book[]> {
+  const response = await fetch(`${API_BASE_URL}/books`, {
+    method: "GET",
+    headers: getHeaders(false), // Books endpoint doesn't require auth
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("getBooks error:", response.status, errorText);
+    if (response.status === 401) {
+      // Token invalid, clear it
+      removeToken();
+    }
+    if (response.status >= 500) {
+      throw new Error("Lỗi server. Vui lòng kiểm tra backend có đang chạy không.");
+    }
     throw new Error("Không thể lấy danh sách sách");
   }
 
@@ -217,6 +242,10 @@ export async function getMyBooks(): Promise<UserBook[]> {
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      // Token invalid, clear it
+      removeToken();
+    }
     throw new Error("Không thể lấy danh sách sách của bạn");
   }
 
@@ -236,6 +265,71 @@ export async function createBook(book: Partial<Book>): Promise<Book> {
   }
 
   return response.json();
+}
+
+export async function updateBook(bookId: number, book: Partial<Book>): Promise<Book> {
+  const response = await fetch(`${API_BASE_URL}/books/${bookId}`, {
+    method: "PATCH",
+    headers: getHeaders(true),
+    body: JSON.stringify(book),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể cập nhật sách");
+  }
+
+  return response.json();
+}
+
+export async function uploadBookFile(file: File): Promise<{ url: string; filename: string }> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const token = getToken();
+  const headers: HeadersInit = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/upload/book-file`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể upload file");
+  }
+
+  const result = await response.json();
+  return { url: result.url, filename: result.filename };
+}
+
+export async function uploadBookCover(file: File): Promise<{ url: string; filename: string }> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const token = getToken();
+  const headers: HeadersInit = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/upload/book-cover`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể upload ảnh bìa");
+  }
+
+  const result = await response.json();
+  return { url: result.url, filename: result.filename };
 }
 
 export async function addBookToMyList(bookId: number): Promise<UserBook> {
@@ -280,6 +374,8 @@ export interface Review {
   review_text: string;
   created_at: string;
   updated_at: string;
+  user_name?: string; // User name for display
+  user?: { id: number; name: string }; // Full user object if available
 }
 
 export async function createReview(bookId: number, rating: number, reviewText: string): Promise<Review> {
@@ -314,6 +410,18 @@ export async function getBookReviews(bookId: number): Promise<Review[]> {
   return response.json();
 }
 
+export async function deleteReview(reviewId: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/reviews/${reviewId}`, {
+    method: "DELETE",
+    headers: getHeaders(true),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể xóa đánh giá");
+  }
+}
+
 // ============================================
 // GROUPS API
 // ============================================
@@ -332,10 +440,18 @@ export interface Group {
 export async function getGroups(): Promise<Group[]> {
   const response = await fetch(`${API_BASE_URL}/groups`, {
     method: "GET",
-    headers: getHeaders(true),
+    headers: getHeaders(false), // Groups endpoint doesn't require auth
   });
 
   if (!response.ok) {
+    const errorText = await response.text();
+    console.error("getGroups error:", response.status, errorText);
+    if (response.status === 401) {
+      removeToken();
+    }
+    if (response.status >= 500) {
+      throw new Error("Lỗi server. Vui lòng kiểm tra backend có đang chạy không.");
+    }
     throw new Error("Không thể lấy danh sách câu lạc bộ");
   }
 
@@ -394,6 +510,22 @@ export async function getMyGroups(): Promise<Group[]> {
 
   if (!response.ok) {
     throw new Error("Không thể lấy danh sách câu lạc bộ của tôi");
+  }
+
+  return response.json();
+}
+
+export async function getGroup(groupId: number): Promise<Group> {
+  const response = await fetch(`${API_BASE_URL}/groups/${groupId}`, {
+    method: "GET",
+    headers: getHeaders(true),
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error("Không tìm thấy câu lạc bộ");
+    }
+    throw new Error("Không thể lấy thông tin câu lạc bộ");
   }
 
   return response.json();

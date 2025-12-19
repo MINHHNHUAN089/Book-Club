@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
+import Footer from "../components/Footer";
 import { Challenge as APIChallenge, UserChallenge } from "../api/backend";
 import { joinChallenge, leaveChallenge, getMyChallenges } from "../api/backend";
 
@@ -122,7 +123,6 @@ const ChallengesPage = ({ challenges }: ChallengesPageProps) => {
           <Navigation />
         </div>
         <div className="header-actions">
-          <button className="primary-btn" onClick={() => navigate("/discover")}>+ Thêm sách</button>
           <div 
             className="avatar" 
             aria-label="User avatar"
@@ -334,6 +334,8 @@ const ChallengesPage = ({ challenges }: ChallengesPageProps) => {
           </div>
         )}
       </main>
+      
+      <Footer />
     </div>
   );
 };
