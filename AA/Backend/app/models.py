@@ -142,6 +142,10 @@ class Group(Base):
     # Relationships
     members = relationship("User", secondary=user_group_association, back_populates="groups")
     current_book = relationship("Book", foreign_keys=[current_book_id])
+    discussions = relationship("GroupDiscussion", back_populates="group", cascade="all, delete-orphan")
+    schedules = relationship("GroupSchedule", back_populates="group", cascade="all, delete-orphan")
+    events = relationship("GroupEvent", back_populates="group", cascade="all, delete-orphan")
+    creator = relationship("User", foreign_keys=[created_by])
 
 
 class Challenge(Base):
@@ -162,3 +166,53 @@ class Challenge(Base):
     # Relationships
     participants = relationship("User", secondary=user_challenge_association, back_populates="challenges")
 
+
+class GroupDiscussion(Base):
+    """Thảo luận/bình luận trong group"""
+    __tablename__ = "group_discussions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    group_id = Column(Integer, ForeignKey("groups.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    group = relationship("Group", back_populates="discussions")
+    user = relationship("User")
+
+
+class GroupSchedule(Base):
+    """Lịch trình hoạt động của group"""
+    __tablename__ = "group_schedules"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    group_id = Column(Integer, ForeignKey("groups.id"), nullable=False)
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    scheduled_date = Column(DateTime(timezone=True), nullable=False)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    group = relationship("Group", back_populates="schedules")
+    creator = relationship("User")
+
+
+class GroupEvent(Base):
+    """Sự kiện của group"""
+    __tablename__ = "group_events"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    group_id = Column(Integer, ForeignKey("groups.id"), nullable=False)
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    event_date = Column(DateTime(timezone=True), nullable=False)
+    location = Column(String(255), nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    group = relationship("Group", back_populates="events")
+    creator = relationship("User")

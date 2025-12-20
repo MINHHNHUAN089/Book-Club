@@ -1,5 +1,5 @@
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse, Response
 from app.auth import get_current_active_user
 from app.models import User
 import os
@@ -161,4 +161,34 @@ async def list_book_covers():
             status_code=500,
             detail=f"Lỗi khi đọc danh sách ảnh: {str(e)}"
         )
+
+
+@router.get("/pdf/{filename}")
+async def get_pdf_file(filename: str):
+    """
+    Serve PDF file với CORS headers cho PDF.js
+    """
+    file_path = FILES_DIR / filename
+    
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File không tồn tại")
+    
+    if not file_path.suffix.lower() == ".pdf":
+        raise HTTPException(status_code=400, detail="Chỉ hỗ trợ file PDF")
+    
+    # Read file and return with CORS headers
+    with open(file_path, "rb") as f:
+        content = f.read()
+    
+    return Response(
+        content=content,
+        media_type="application/pdf",
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+            "Content-Disposition": f"inline; filename={filename}",
+            "Cache-Control": "public, max-age=86400"
+        }
+    )
 

@@ -186,6 +186,8 @@ export interface Book {
   page_count?: number;
   published_date?: string;
   authors?: Array<{ id: number; name: string; bio?: string; avatar_url?: string }>;
+  average_rating?: number;
+  total_reviews?: number;
 }
 
 export interface UserBook {
@@ -432,9 +434,49 @@ export interface Group {
   description?: string;
   topic?: string;
   cover_url?: string;
-  current_book?: { id: number; title: string } | null;
+  current_book?: { id: number; title: string; authors?: Array<{ id: number; name: string }> } | null;
   members_count?: number;
+  created_by?: number;
   created_at?: string;
+}
+
+export interface GroupMember {
+  id: number;
+  name: string;
+  email: string;
+  avatar_url?: string;
+  role?: string;
+}
+
+export interface GroupDiscussion {
+  id: number;
+  group_id: number;
+  user_id: number;
+  content: string;
+  user: { id: number; name: string; email: string; avatar_url?: string };
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface GroupSchedule {
+  id: number;
+  group_id: number;
+  title: string;
+  description?: string;
+  scheduled_date: string;
+  created_by: number;
+  created_at: string;
+}
+
+export interface GroupEvent {
+  id: number;
+  group_id: number;
+  title: string;
+  description?: string;
+  event_date: string;
+  location?: string;
+  created_by: number;
+  created_at: string;
 }
 
 export async function getGroups(): Promise<Group[]> {
@@ -529,6 +571,199 @@ export async function getGroup(groupId: number): Promise<Group> {
   }
 
   return response.json();
+}
+
+// ============================================
+// GROUP MEMBERS API
+// ============================================
+
+export async function getGroupMembers(groupId: number): Promise<GroupMember[]> {
+  const response = await fetch(`${API_BASE_URL}/groups/${groupId}/members`, {
+    method: "GET",
+    headers: getHeaders(false),
+  });
+
+  if (!response.ok) {
+    throw new Error("Không thể lấy danh sách thành viên");
+  }
+
+  return response.json();
+}
+
+// ============================================
+// GROUP DISCUSSIONS API
+// ============================================
+
+export async function getGroupDiscussions(groupId: number): Promise<GroupDiscussion[]> {
+  const response = await fetch(`${API_BASE_URL}/groups/${groupId}/discussions`, {
+    method: "GET",
+    headers: getHeaders(false),
+  });
+
+  if (!response.ok) {
+    throw new Error("Không thể lấy danh sách thảo luận");
+  }
+
+  return response.json();
+}
+
+export async function createGroupDiscussion(groupId: number, content: string): Promise<GroupDiscussion> {
+  const response = await fetch(`${API_BASE_URL}/groups/${groupId}/discussions`, {
+    method: "POST",
+    headers: getHeaders(true),
+    body: JSON.stringify({ content }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể đăng bình luận");
+  }
+
+  return response.json();
+}
+
+export async function deleteGroupDiscussion(groupId: number, discussionId: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/groups/${groupId}/discussions/${discussionId}`, {
+    method: "DELETE",
+    headers: getHeaders(true),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể xóa bình luận");
+  }
+}
+
+// ============================================
+// GROUP SCHEDULES API
+// ============================================
+
+export async function getGroupSchedules(groupId: number): Promise<GroupSchedule[]> {
+  const response = await fetch(`${API_BASE_URL}/groups/${groupId}/schedules`, {
+    method: "GET",
+    headers: getHeaders(false),
+  });
+
+  if (!response.ok) {
+    throw new Error("Không thể lấy lịch trình");
+  }
+
+  return response.json();
+}
+
+export async function createGroupSchedule(
+  groupId: number,
+  data: { title: string; description?: string; scheduled_date: string }
+): Promise<GroupSchedule> {
+  const response = await fetch(`${API_BASE_URL}/groups/${groupId}/schedules`, {
+    method: "POST",
+    headers: getHeaders(true),
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể tạo lịch trình");
+  }
+
+  return response.json();
+}
+
+export async function updateGroupSchedule(
+  groupId: number,
+  scheduleId: number,
+  data: { title?: string; description?: string; scheduled_date?: string }
+): Promise<GroupSchedule> {
+  const response = await fetch(`${API_BASE_URL}/groups/${groupId}/schedules/${scheduleId}`, {
+    method: "PATCH",
+    headers: getHeaders(true),
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể cập nhật lịch trình");
+  }
+
+  return response.json();
+}
+
+export async function deleteGroupSchedule(groupId: number, scheduleId: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/groups/${groupId}/schedules/${scheduleId}`, {
+    method: "DELETE",
+    headers: getHeaders(true),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể xóa lịch trình");
+  }
+}
+
+// ============================================
+// GROUP EVENTS API
+// ============================================
+
+export async function getGroupEvents(groupId: number): Promise<GroupEvent[]> {
+  const response = await fetch(`${API_BASE_URL}/groups/${groupId}/events`, {
+    method: "GET",
+    headers: getHeaders(false),
+  });
+
+  if (!response.ok) {
+    throw new Error("Không thể lấy danh sách sự kiện");
+  }
+
+  return response.json();
+}
+
+export async function createGroupEvent(
+  groupId: number,
+  data: { title: string; description?: string; event_date: string; location?: string }
+): Promise<GroupEvent> {
+  const response = await fetch(`${API_BASE_URL}/groups/${groupId}/events`, {
+    method: "POST",
+    headers: getHeaders(true),
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể tạo sự kiện");
+  }
+
+  return response.json();
+}
+
+export async function updateGroupEvent(
+  groupId: number,
+  eventId: number,
+  data: { title?: string; description?: string; event_date?: string; location?: string }
+): Promise<GroupEvent> {
+  const response = await fetch(`${API_BASE_URL}/groups/${groupId}/events/${eventId}`, {
+    method: "PATCH",
+    headers: getHeaders(true),
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể cập nhật sự kiện");
+  }
+
+  return response.json();
+}
+
+export async function deleteGroupEvent(groupId: number, eventId: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/groups/${groupId}/events/${eventId}`, {
+    method: "DELETE",
+    headers: getHeaders(true),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể xóa sự kiện");
+  }
 }
 
 // ============================================
@@ -769,6 +1004,30 @@ export async function deleteBookAdmin(bookId: number): Promise<void> {
     const error = await response.json();
     throw new Error(error.detail || "Không thể xóa sách");
   }
+}
+
+export interface AdminReview {
+  id: number;
+  book_id: number;
+  user_id: number;
+  rating: number;
+  content: string;
+  created_at: string;
+  user?: { id: number; name: string; email: string };
+  book?: { id: number; title: string };
+}
+
+export async function getAllReviewsAdmin(): Promise<AdminReview[]> {
+  const response = await fetch(`${API_BASE_URL}/admin/reviews`, {
+    headers: getHeaders(true),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể lấy danh sách đánh giá");
+  }
+
+  return response.json();
 }
 
 export async function deleteReviewAdmin(reviewId: number): Promise<void> {

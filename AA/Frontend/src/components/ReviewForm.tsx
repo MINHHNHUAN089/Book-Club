@@ -53,6 +53,7 @@ const ReviewForm = ({ book, userBookId, onSave, onBookAdded, onProgressUpdated }
   const [isMarkingRead, setIsMarkingRead] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [deletingReviewId, setDeletingReviewId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -75,13 +76,15 @@ const ReviewForm = ({ book, userBookId, onSave, onBookAdded, onProgressUpdated }
         getCurrentUser().catch(() => null) // Get current user, but don't fail if it errors
       ]);
       
-      // Store current user ID
+      // Store current user ID and role
       if (currentUser) {
-        console.log("Current user ID:", currentUser.id);
+        console.log("Current user ID:", currentUser.id, "Role:", currentUser.role);
         setCurrentUserId(currentUser.id);
+        setCurrentUserRole(currentUser.role || null);
       } else {
         console.log("No current user found");
         setCurrentUserId(null);
+        setCurrentUserRole(null);
       }
       
       // Sắp xếp reviews theo thời gian mới nhất (created_at giảm dần)
@@ -494,24 +497,15 @@ const ReviewForm = ({ book, userBookId, onSave, onBookAdded, onProgressUpdated }
                           ))}
                         </div>
                         {(() => {
-                          // Compare as numbers to handle type mismatches
-                          const reviewUserIdNum = Number(item.user_id);
+                          // Get user ID from either user_id or user.id (handle both API formats)
+                          const reviewUserId = item.user_id ?? item.user?.id;
+                          const reviewUserIdNum = Number(reviewUserId);
                           const currentUserIdNum = Number(currentUserId);
-                          const isMyReview = currentUserId && reviewUserIdNum === currentUserIdNum;
+                          const isMyReview = currentUserId != null && !isNaN(reviewUserIdNum) && reviewUserIdNum === currentUserIdNum;
+                          const isAdmin = currentUserRole === "admin";
+                          const canDelete = isMyReview || isAdmin;
                           
-                          // Log với JSON.stringify để xem đầy đủ
-                          if (currentUserId) {
-                            console.log(`Review ${item.id}:`, {
-                              reviewUserId: item.user_id,
-                              reviewUserIdNum: reviewUserIdNum,
-                              currentUserId: currentUserId,
-                              currentUserIdNum: currentUserIdNum,
-                              match: reviewUserIdNum === currentUserIdNum,
-                              isMyReview: isMyReview
-                            });
-                          }
-                          
-                          return isMyReview ? (
+                          return canDelete ? (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -519,20 +513,22 @@ const ReviewForm = ({ book, userBookId, onSave, onBookAdded, onProgressUpdated }
                               }}
                               disabled={deletingReviewId === item.id}
                               style={{
-                                padding: "4px 8px",
+                                padding: "6px 12px",
                                 fontSize: "12px",
-                                background: "rgba(239, 68, 68, 0.1)",
-                                color: "#fca5a5",
+                                background: "rgba(239, 68, 68, 0.15)",
+                                color: "#ef4444",
                                 border: "1px solid rgba(239, 68, 68, 0.3)",
                                 borderRadius: "6px",
                                 cursor: deletingReviewId === item.id ? "not-allowed" : "pointer",
                                 opacity: deletingReviewId === item.id ? 0.6 : 1,
                                 fontWeight: 600,
-                                minWidth: "60px"
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "4px"
                               }}
-                              title="Xóa đánh giá này"
+                              title={isMyReview ? "Xóa đánh giá của bạn" : "Xóa đánh giá (Admin)"}
                             >
-                              {deletingReviewId === item.id ? "Đang xóa..." : "✕ Xóa"}
+                              🗑️ {deletingReviewId === item.id ? "Đang xóa..." : "Xóa"}
                             </button>
                           ) : null;
                         })()}

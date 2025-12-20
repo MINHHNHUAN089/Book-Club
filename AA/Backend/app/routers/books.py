@@ -17,7 +17,7 @@ def get_books(
     search: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    """Get all books with optional search"""
+    """Get all books with optional search and average ratings"""
     from sqlalchemy.orm import joinedload
     
     try:
@@ -33,7 +33,43 @@ def get_books(
         
         # Eager load authors to avoid N+1 queries
         books = query.options(joinedload(Book.authors)).offset(skip).limit(limit).all()
-        return books
+        
+        # Calculate average rating for each book
+        book_ids = [book.id for book in books]
+        rating_map = {}
+        if book_ids:
+            # Get average ratings and review counts for all books in one query
+            rating_stats = db.query(
+                Review.book_id,
+                func.avg(Review.rating).label('avg_rating'),
+                func.count(Review.id).label('review_count')
+            ).filter(Review.book_id.in_(book_ids)).group_by(Review.book_id).all()
+            
+            # Create a map for quick lookup
+            rating_map = {stat.book_id: (float(stat.avg_rating), stat.review_count) for stat in rating_stats}
+        
+        # Convert to response with ratings
+        result = []
+        for book in books:
+            avg_rating, total_reviews = rating_map.get(book.id, (None, 0))
+            book_dict = {
+                "id": book.id,
+                "title": book.title,
+                "isbn": book.isbn,
+                "cover_url": book.cover_url,
+                "file_url": book.file_url,
+                "description": book.description,
+                "published_date": book.published_date,
+                "page_count": book.page_count,
+                "google_books_id": book.google_books_id,
+                "authors": book.authors,
+                "average_rating": round(avg_rating, 1) if avg_rating else None,
+                "total_reviews": total_reviews,
+                "created_at": book.created_at
+            }
+            result.append(book_dict)
+        
+        return result
     except Exception as e:
         import traceback
         print(f"Error in get_books: {str(e)}")
@@ -43,12 +79,40 @@ def get_books(
 
 @router.get("/{book_id}", response_model=BookResponse)
 def get_book(book_id: int, db: Session = Depends(get_db)):
-    """Get a specific book by ID"""
+    """Get a specific book by ID with average rating"""
     from sqlalchemy.orm import joinedload
     book = db.query(Book).options(joinedload(Book.authors)).filter(Book.id == book_id).first()
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
-    return book
+    
+    # Calculate average rating
+    rating_stat = db.query(
+        func.avg(Review.rating).label('avg_rating'),
+        func.count(Review.id).label('review_count')
+    ).filter(Review.book_id == book_id).first()
+    
+    avg_rating = None
+    total_reviews = 0
+    if rating_stat and rating_stat.avg_rating:
+        avg_rating = round(float(rating_stat.avg_rating), 1)
+        total_reviews = rating_stat.review_count
+    
+    # Return as dict to include computed fields
+    return {
+        "id": book.id,
+        "title": book.title,
+        "isbn": book.isbn,
+        "cover_url": book.cover_url,
+        "file_url": book.file_url,
+        "description": book.description,
+        "published_date": book.published_date,
+        "page_count": book.page_count,
+        "google_books_id": book.google_books_id,
+        "authors": book.authors,
+        "average_rating": avg_rating,
+        "total_reviews": total_reviews,
+        "created_at": book.created_at
+    }
 
 
 @router.patch("/{book_id}", response_model=BookResponse)

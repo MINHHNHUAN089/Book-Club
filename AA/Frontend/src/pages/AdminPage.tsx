@@ -25,6 +25,8 @@ import {
   uploadBookCover,
   createGroup,
   getHeaders,
+  getAllReviewsAdmin,
+  AdminReview,
 } from "../api/backend";
 
 const AdminPage = () => {
@@ -74,6 +76,10 @@ const AdminPage = () => {
     current_book_id: "",
   });
   const [isSavingGroup, setIsSavingGroup] = useState(false);
+
+  // Reviews
+  const [reviews, setReviews] = useState<AdminReview[]>([]);
+  const [reviewSearch, setReviewSearch] = useState("");
 
   // Challenges
   const [challenges, setChallenges] = useState<Challenge[]>([]);
@@ -140,6 +146,21 @@ const AdminPage = () => {
       }
     };
     loadGroups();
+  }, [activeTab]);
+
+  // Load reviews when reviews tab is active
+  useEffect(() => {
+    const loadReviews = async () => {
+      if (activeTab === "reviews") {
+        try {
+          const reviewsData = await getAllReviewsAdmin();
+          setReviews(reviewsData);
+        } catch (err) {
+          console.error("Error loading reviews:", err);
+        }
+      }
+    };
+    loadReviews();
   }, [activeTab]);
 
   // Load challenges when challenges tab is active
@@ -574,6 +595,12 @@ const AdminPage = () => {
             Sách
           </button>
           <button
+            className={`tab ${activeTab === "reviews" ? "active" : ""}`}
+            onClick={() => setActiveTab("reviews")}
+          >
+            Đánh giá
+          </button>
+          <button
             className={`tab ${activeTab === "groups" ? "active" : ""}`}
             onClick={() => setActiveTab("groups")}
           >
@@ -604,9 +631,30 @@ const AdminPage = () => {
                 <div style={{ color: "#94a3b8", fontSize: "14px", marginBottom: "8px" }}>Tổng sách</div>
                 <div style={{ color: "#e2e8f0", fontSize: "32px", fontWeight: 700 }}>{stats.total_books}</div>
               </div>
-              <div style={{ backgroundColor: "#1e293b", padding: "24px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.1)" }}>
+              <div 
+                style={{ 
+                  backgroundColor: "#1e293b", 
+                  padding: "24px", 
+                  borderRadius: "12px", 
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease"
+                }}
+                onClick={() => setActiveTab("reviews")}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "#13a4ec";
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)";
+                  e.currentTarget.style.transform = "translateY(0)";
+                }}
+              >
                 <div style={{ color: "#94a3b8", fontSize: "14px", marginBottom: "8px" }}>Tổng đánh giá</div>
                 <div style={{ color: "#e2e8f0", fontSize: "32px", fontWeight: 700 }}>{stats.total_reviews}</div>
+                <div style={{ color: "#13a4ec", fontSize: "12px", marginTop: "4px" }}>
+                  👆 Click để xem chi tiết
+                </div>
               </div>
               <div style={{ backgroundColor: "#1e293b", padding: "24px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.1)" }}>
                 <div style={{ color: "#94a3b8", fontSize: "14px", marginBottom: "8px" }}>Câu lạc bộ</div>
@@ -797,6 +845,100 @@ const AdminPage = () => {
                     </div>
                   </div>
                 ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === "reviews" && (
+          <div>
+            <h2 style={{ color: "#e2e8f0", fontSize: "28px", fontWeight: 700, marginBottom: "24px" }}>
+              Quản lý đánh giá ({reviews.length})
+            </h2>
+            <div style={{ display: "flex", gap: "12px", marginBottom: "24px" }}>
+              <input
+                type="text"
+                placeholder="Tìm kiếm đánh giá..."
+                value={reviewSearch}
+                onChange={(e) => setReviewSearch(e.target.value)}
+                style={{
+                  flex: 1,
+                  padding: "12px",
+                  borderRadius: "8px",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  backgroundColor: "#0f172a",
+                  color: "#e2e8f0",
+                }}
+              />
+            </div>
+            <div style={{ backgroundColor: "#1e293b", borderRadius: "12px", overflow: "hidden" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                    <th style={{ padding: "16px", textAlign: "left", color: "#cbd5e1" }}>ID</th>
+                    <th style={{ padding: "16px", textAlign: "left", color: "#cbd5e1" }}>Sách</th>
+                    <th style={{ padding: "16px", textAlign: "left", color: "#cbd5e1" }}>Người dùng</th>
+                    <th style={{ padding: "16px", textAlign: "left", color: "#cbd5e1" }}>Rating</th>
+                    <th style={{ padding: "16px", textAlign: "left", color: "#cbd5e1" }}>Nội dung</th>
+                    <th style={{ padding: "16px", textAlign: "left", color: "#cbd5e1" }}>Ngày tạo</th>
+                    <th style={{ padding: "16px", textAlign: "left", color: "#cbd5e1" }}>Hành động</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reviews
+                    .filter((r) => 
+                      !reviewSearch || 
+                      r.content?.toLowerCase().includes(reviewSearch.toLowerCase()) ||
+                      r.book?.title?.toLowerCase().includes(reviewSearch.toLowerCase()) ||
+                      r.user?.name?.toLowerCase().includes(reviewSearch.toLowerCase())
+                    )
+                    .map((review) => (
+                      <tr key={review.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                        <td style={{ padding: "16px", color: "#e2e8f0" }}>{review.id}</td>
+                        <td style={{ padding: "16px", color: "#e2e8f0" }}>
+                          {review.book?.title || `Book #${review.book_id}`}
+                        </td>
+                        <td style={{ padding: "16px", color: "#94a3b8" }}>
+                          {review.user?.name || `User #${review.user_id}`}
+                        </td>
+                        <td style={{ padding: "16px", color: "#fbbf24" }}>
+                          {"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}
+                        </td>
+                        <td style={{ padding: "16px", color: "#94a3b8", maxWidth: "300px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {review.content || "-"}
+                        </td>
+                        <td style={{ padding: "16px", color: "#64748b", fontSize: "12px" }}>
+                          {review.created_at ? new Date(review.created_at).toLocaleDateString("vi-VN") : "-"}
+                        </td>
+                        <td style={{ padding: "16px" }}>
+                          <button
+                            className="secondary-btn"
+                            onClick={async () => {
+                              if (window.confirm("Bạn có chắc muốn xóa đánh giá này?")) {
+                                try {
+                                  await deleteReviewAdmin(review.id);
+                                  alert("Đã xóa thành công!");
+                                  const updatedReviews = await getAllReviewsAdmin();
+                                  setReviews(updatedReviews);
+                                } catch (err) {
+                                  console.error("Error deleting review:", err);
+                                  alert(err instanceof Error ? err.message : "Không thể xóa");
+                                }
+                              }
+                            }}
+                            style={{ padding: "6px 12px", fontSize: "14px" }}
+                          >
+                            Xóa
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+              {reviews.length === 0 && (
+                <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
+                  Chưa có đánh giá nào
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -99,6 +99,8 @@ class BookUpdate(BaseModel):
 class BookResponse(BookBase):
     id: int
     authors: List[AuthorResponse] = []
+    average_rating: Optional[float] = None
+    total_reviews: int = 0
     created_at: datetime
     
     class Config:
@@ -148,6 +150,8 @@ class ReviewUpdate(ReviewBase):
 
 class ReviewResponse(ReviewBase):
     id: int
+    user_id: int
+    book_id: int
     user: UserResponse
     book: BookResponse
     created_at: datetime
@@ -243,3 +247,87 @@ class ChallengeStatistics(BaseModel):
     completed_count: int = 0
     average_progress: float = 0.0
 
+
+# Group Discussion Schemas
+class GroupDiscussionBase(BaseModel):
+    content: str
+
+
+class GroupDiscussionCreate(GroupDiscussionBase):
+    pass
+
+
+class GroupDiscussionResponse(GroupDiscussionBase):
+    id: int
+    group_id: int
+    user_id: int
+    user: UserResponse
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+
+# Group Schedule Schemas
+class GroupScheduleBase(BaseModel):
+    title: str
+    description: Optional[str] = None
+    scheduled_date: datetime
+
+
+class GroupScheduleCreate(GroupScheduleBase):
+    pass
+
+
+class GroupScheduleUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    scheduled_date: Optional[datetime] = None
+
+
+class GroupScheduleResponse(GroupScheduleBase):
+    id: int
+    group_id: int
+    created_by: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+# Group Event Schemas
+class GroupEventBase(BaseModel):
+    title: str
+    description: Optional[str] = None
+    event_date: datetime
+    location: Optional[str] = None
+
+
+class GroupEventCreate(GroupEventBase):
+    pass
+
+
+class GroupEventUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    event_date: Optional[datetime] = None
+    location: Optional[str] = None
+
+
+class GroupEventResponse(GroupEventBase):
+    id: int
+    group_id: int
+    created_by: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+# Extended Group Response with creator info
+class GroupDetailResponse(GroupResponse):
+    created_by: int
+    
+    class Config:
+        from_attributes = True

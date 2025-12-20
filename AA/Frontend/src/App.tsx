@@ -67,6 +67,14 @@ const App = () => {
       return [];
     }
     
+    // Create a map from allBooks to get average_rating
+    const allBooksRatingMap = new Map<string, number>();
+    allBooks.forEach((b) => {
+      if (b.rating != null) {
+        allBooksRatingMap.set(b.id, b.rating);
+      }
+    });
+    
     return userBooks
       .filter((ub) => ub && ub.book) // Filter out invalid entries
       .map((ub) => {
@@ -80,14 +88,17 @@ const App = () => {
             authorName = ub.book.author;
           }
           
+          const bookId = ub.book_id?.toString() || ub.book?.id?.toString() || "";
+          
           return {
-            id: ub.book_id?.toString() || ub.book?.id?.toString() || "",
+            id: bookId,
             title: ub.book?.title || "Untitled",
             author: authorName,
             coverUrl: ub.book?.cover_url || undefined,
             fileUrl: ub.book?.file_url || undefined,
             progress: ub.progress || 0,
-            rating: ub.rating || undefined,
+            // Use average_rating from allBooks (synced with reviews)
+            rating: allBooksRatingMap.get(bookId) ?? undefined,
             review: undefined, // Will be loaded separately if needed
             description: ub.book?.description || undefined,
           };
@@ -97,7 +108,7 @@ const App = () => {
         }
       })
       .filter((book): book is Book => book !== null); // Remove null entries
-  }, [userBooks]);
+  }, [userBooks, allBooks]);
 
   const selectedBookId = useMemo(() => books[0]?.id ?? null, [books]);
 
@@ -262,10 +273,8 @@ const App = () => {
                 coverUrl: book.cover_url,
                 fileUrl: book.file_url,
                 progress: userBook ? (userBook.progress || 0) : 0,
-                // Keep rating as number if it exists, otherwise undefined (not 0)
-                rating: userBook && userBook.rating != null && userBook.rating !== undefined 
-                  ? Number(userBook.rating) 
-                  : undefined,
+                // Use average_rating from API (calculated from all reviews) - this syncs with review page
+                rating: book.average_rating != null ? Number(book.average_rating) : undefined,
                 description: book.description,
               };
             });
@@ -367,10 +376,8 @@ const App = () => {
               coverUrl: book.cover_url,
               fileUrl: book.file_url,
               progress: userBook ? (userBook.progress || 0) : 0,
-              // Keep rating as number if it exists, otherwise undefined (not 0)
-              rating: userBook && userBook.rating != null && userBook.rating !== undefined 
-                ? Number(userBook.rating) 
-                : undefined,
+              // Use average_rating from API (synced with reviews)
+              rating: book.average_rating != null ? Number(book.average_rating) : undefined,
               description: book.description,
             };
           });
