@@ -1,11 +1,12 @@
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useMemo, useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import BookList from "../components/BookList";
 import Navigation from "../components/Navigation";
 import Footer from "../components/Footer";
 import { Book } from "../types";
+import { getFollowedBooks } from "../api/backend";
 
-type Filter = "all" | "reading";
+type Filter = "all" | "following";
 
 interface BooksPageProps {
   books: Book[];
@@ -15,29 +16,86 @@ interface BooksPageProps {
 
 const BooksPage = ({ books, allBooks, onUpdateProgress }: BooksPageProps) => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<Filter>("all");
+  const tabFromUrl = searchParams.get("tab");
+  const [filter, setFilter] = useState<Filter>(tabFromUrl === "following" ? "following" : "all");
+  const [followedBooks, setFollowedBooks] = useState<Book[]>([]);
+  const [loadingFollowed, setLoadingFollowed] = useState(false);
+
+  // Debug logging
+  useEffect(() => {
+    console.log("BooksPage - allBooks:", allBooks?.length || 0, "books:", books?.length || 0);
+    console.log("BooksPage - allBooks sample:", allBooks?.slice(0, 3));
+  }, [allBooks, books]);
+
+  // Update URL when filter changes
+  useEffect(() => {
+    if (filter === "following") {
+      setSearchParams({ tab: "following" });
+    } else {
+      setSearchParams({});
+    }
+  }, [filter, setSearchParams]);
+
+  // Fetch followed books when filter changes to "following"
+  useEffect(() => {
+    const fetchFollowedBooks = async () => {
+      if (filter === "following") {
+        setLoadingFollowed(true);
+        try {
+          const followed = await getFollowedBooks();
+          // Map API response (snake_case) to frontend Book type (camelCase)
+          const mappedFollowed: Book[] = followed.map((book: any) => {
+            const authorName = book.authors && book.authors.length > 0
+              ? book.authors.map((a: any) => a.name).join(", ")
+              : book.author || "Unknown";
+            
+            return {
+              id: book.id.toString(),
+              title: book.title,
+              author: authorName,
+              coverUrl: book.cover_url, // Map cover_url to coverUrl
+              fileUrl: book.file_url,
+              progress: 0, // Followed books don't have progress
+              rating: book.average_rating != null ? Number(book.average_rating) : undefined,
+              description: book.description,
+            };
+          });
+          console.log("[BooksPage] Mapped followed books:", mappedFollowed.length, mappedFollowed);
+          setFollowedBooks(mappedFollowed);
+        } catch (err) {
+          console.error("Error fetching followed books:", err);
+          setFollowedBooks([]);
+        } finally {
+          setLoadingFollowed(false);
+        }
+      }
+    };
+
+    fetchFollowedBooks();
+  }, [filter]);
 
   const filteredBooks = useMemo(() => {
     const normalize = (s: string) => s.toLowerCase();
     
-    // Debug: Log để kiểm tra
-    console.log("BooksPage - books:", books.length, "allBooks:", allBooks.length, "filter:", filter);
-    console.log("BooksPage - allBooks sample:", allBooks.slice(0, 3));
-    
     // Chọn danh sách sách để hiển thị
-    const booksToShow = filter === "all" ? allBooks : books;
-    
-    console.log("BooksPage - booksToShow:", booksToShow.length, "Sample:", booksToShow.slice(0, 3));
+    // Nếu filter là "following", dùng followedBooks
+    // Nếu filter là "all", dùng allBooks, nhưng nếu allBooks rỗng thì fallback về books (userBooks)
+    let booksToShow: Book[] = [];
+    if (filter === "following") {
+      booksToShow = followedBooks;
+    } else {
+      // Fallback: nếu allBooks rỗng, dùng books (userBooks)
+      booksToShow = (allBooks && allBooks.length > 0) ? allBooks : books;
+    }
     
     if (booksToShow.length === 0) {
-      console.warn("BooksPage: No books to show! Check if allBooks is loaded correctly.");
       return [];
     }
     
     const filtered = booksToShow.filter((b) => {
       if (!b || !b.title) {
-        console.warn("BooksPage: Invalid book found:", b);
         return false;
       }
       
@@ -46,22 +104,11 @@ const BooksPage = ({ books, allBooks, onUpdateProgress }: BooksPageProps) => {
         normalize(b.title).includes(normalize(search)) ||
         normalize(b.author || "").includes(normalize(search));
 
-      if (!matchesSearch) return false;
-
-      // Nếu là "Tất cả sách", hiển thị tất cả
-      if (filter === "all") return true;
-      
-      // Nếu là "Đang đọc", chỉ hiển thị sách có progress > 0 && < 100
-      if (filter === "reading") {
-        return (b.progress || 0) > 0 && (b.progress || 0) < 100;
-      }
-      
-      return true;
+      return matchesSearch;
     });
     
-    console.log(`BooksPage: Total books: ${booksToShow.length}, Filtered: ${filtered.length}, Filter: ${filter}, Search: "${search}"`);
     return filtered;
-  }, [allBooks, books, filter, search]);
+  }, [allBooks, books, followedBooks, filter, search]);
 
   return (
     <div className="dark-page">
@@ -104,25 +151,29 @@ const BooksPage = ({ books, allBooks, onUpdateProgress }: BooksPageProps) => {
             Tất cả sách
           </button>
           <button
-            className={filter === "reading" ? "tab active" : "tab"}
-            onClick={() => setFilter("reading")}
+            className={filter === "following" ? "tab active" : "tab"}
+            onClick={() => setFilter("following")}
             type="button"
           >
-            Đang đọc
+            Theo dõi
           </button>
         </div>
       </section>
 
-      {filteredBooks.length === 0 ? (
+      {loadingFollowed && filter === "following" ? (
         <div className="user-empty-state">
-          {filter === "reading" 
-            ? "Bạn chưa có sách nào đang đọc."
+          Đang tải danh sách sách đang theo dõi...
+        </div>
+      ) : filteredBooks.length === 0 ? (
+        <div className="user-empty-state">
+          {filter === "following" 
+            ? "Bạn chưa có sách nào đang theo dõi."
             : "Không tìm thấy sách nào."}
         </div>
       ) : (
         <BookList
           books={filteredBooks}
-          onUpdateProgress={filter === "reading" ? onUpdateProgress : undefined}
+          onUpdateProgress={undefined}
           onSelect={(book) => navigate(`/review?bookId=${book.id}`)}
         />
       )}
@@ -133,5 +184,4 @@ const BooksPage = ({ books, allBooks, onUpdateProgress }: BooksPageProps) => {
 };
 
 export default BooksPage;
-
 

@@ -34,6 +34,14 @@ user_author_follow_association = Table(
     Column('author_id', Integer, ForeignKey('authors.id'))
 )
 
+user_book_follow_association = Table(
+    'user_book_follow',
+    Base.metadata,
+    Column('user_id', Integer, ForeignKey('users.id')),
+    Column('book_id', Integer, ForeignKey('books.id')),
+    Column('created_at', DateTime(timezone=True), server_default=func.now())
+)
+
 
 class User(Base):
     __tablename__ = "users"
@@ -54,6 +62,7 @@ class User(Base):
     groups = relationship("Group", secondary=user_group_association, back_populates="members")
     challenges = relationship("Challenge", secondary=user_challenge_association, back_populates="participants")
     followed_authors = relationship("Author", secondary=user_author_follow_association, back_populates="followers")
+    followed_books = relationship("Book", secondary=user_book_follow_association, back_populates="followers")
 
 
 class Book(Base):
@@ -74,6 +83,7 @@ class Book(Base):
     authors = relationship("Author", secondary=book_author_association, back_populates="books")
     user_books = relationship("UserBook", back_populates="book", cascade="all, delete-orphan")
     reviews = relationship("Review", back_populates="book", cascade="all, delete-orphan")
+    followers = relationship("User", secondary=user_book_follow_association, back_populates="followed_books")
 
 
 class Author(Base):
@@ -216,3 +226,24 @@ class GroupEvent(Base):
     # Relationships
     group = relationship("Group", back_populates="events")
     creator = relationship("User")
+
+
+class AuthorNotification(Base):
+    """Thông báo về tác giả (admin tạo)"""
+    __tablename__ = "author_notifications"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    author_id = Column(Integer, ForeignKey("authors.id"), nullable=False)
+    title = Column(String(255), nullable=False)  # Tiêu đề thông báo
+    content = Column(Text, nullable=False)  # Nội dung thông báo
+    notification_type = Column(String(50), default="new_book")  # new_book, announcement, update
+    book_id = Column(Integer, ForeignKey("books.id"), nullable=True)  # Nếu là thông báo sách mới
+    cover_url = Column(String(500), nullable=True)  # Ảnh minh họa
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)  # Admin tạo
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    is_active = Column(Boolean, default=True)  # Có hiển thị không
+    
+    # Relationships
+    author = relationship("Author")
+    book = relationship("Book", foreign_keys=[book_id])
+    creator = relationship("User", foreign_keys=[created_by])

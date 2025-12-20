@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Book } from "../types";
-import { addBookToMyList, updateBookProgress, getBookReviews, Review, getCurrentUser, deleteReview } from "../api/backend";
+import { addBookToMyList, updateBookProgress, getBookReviews, Review, getCurrentUser, deleteReview, followBook, unfollowBook, getFollowedBooks } from "../api/backend";
 
 interface ReviewFormProps {
   book: Book | null;
@@ -55,6 +55,8 @@ const ReviewForm = ({ book, userBookId, onSave, onBookAdded, onProgressUpdated }
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [deletingReviewId, setDeletingReviewId] = useState<number | null>(null);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [isTogglingFollow, setIsTogglingFollow] = useState(false);
 
   useEffect(() => {
     // Reset rating và review khi book thay đổi (theo book.id)
@@ -114,6 +116,31 @@ const ReviewForm = ({ book, userBookId, onSave, onBookAdded, onProgressUpdated }
       loadCommunityReviews();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [book?.id]);
+
+  // Check follow status when book changes
+  useEffect(() => {
+    const checkFollowStatus = async () => {
+      if (book?.id) {
+        try {
+          const followed = await getFollowedBooks();
+          // Compare book.id (string) with followed book id (number or string)
+          const bookIdNum = parseInt(book.id);
+          const isBookFollowed = followed.some(fb => {
+            const followedId = typeof fb.id === 'string' ? parseInt(fb.id) : fb.id;
+            return followedId === bookIdNum;
+          });
+          console.log(`[ReviewForm] Check follow status for book ${book.id}:`, isBookFollowed, "Followed books:", followed.map(fb => ({ id: fb.id, title: fb.title })));
+          setIsFollowing(isBookFollowed);
+        } catch (err) {
+          console.error("Error checking follow status:", err);
+          setIsFollowing(false);
+        }
+      } else {
+        setIsFollowing(false);
+      }
+    };
+    checkFollowStatus();
   }, [book?.id]);
 
   // Calculate average rating from all reviews
@@ -188,6 +215,31 @@ const ReviewForm = ({ book, userBookId, onSave, onBookAdded, onProgressUpdated }
     } finally {
       setIsMarkingRead(false);
     }
+  };
+
+  const handleToggleFollow = async () => {
+    if (!book?.id) return;
+    setIsTogglingFollow(true);
+    try {
+      if (isFollowing) {
+        await unfollowBook(parseInt(book.id));
+        setIsFollowing(false);
+        alert("Đã bỏ theo dõi sách");
+      } else {
+        await followBook(parseInt(book.id));
+        setIsFollowing(true);
+        alert("Đã theo dõi sách thành công!");
+      }
+    } catch (err) {
+      console.error("Error toggling follow:", err);
+      alert(err instanceof Error ? err.message : "Không thể thay đổi trạng thái theo dõi");
+    } finally {
+      setIsTogglingFollow(false);
+    }
+  };
+
+  const handleViewFollowedBooks = () => {
+    navigate("/books?tab=following");
   };
 
   const handleSaveReview = async () => {
@@ -292,6 +344,23 @@ const ReviewForm = ({ book, userBookId, onSave, onBookAdded, onProgressUpdated }
                   Đánh dấu đã đọc
                 </button>
               )}
+              <button 
+                className={isFollowing ? "secondary-btn full" : "primary-btn full"}
+                onClick={handleToggleFollow}
+                disabled={isTogglingFollow || !book?.id}
+                style={{ marginTop: "8px" }}
+              >
+                {isTogglingFollow ? "Đang xử lý..." : isFollowing ? "✓ Đang theo dõi" : "📌 Theo dõi sách"}
+              </button>
+              {isFollowing && (
+                <button 
+                  className="primary-btn full"
+                  onClick={handleViewFollowedBooks}
+                  style={{ marginTop: "8px" }}
+                >
+                  📚 Xem danh sách theo dõi
+                </button>
+              )}
             </div>
           </div>
 
@@ -302,7 +371,7 @@ const ReviewForm = ({ book, userBookId, onSave, onBookAdded, onProgressUpdated }
                 onClick={() => setActiveTab("description")}
                 type="button"
               >
-                Mô tả
+                Reviews
               </button>
               <button 
                 className={`tab ${activeTab === "details" ? "active" : ""}`}

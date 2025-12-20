@@ -96,27 +96,43 @@ export async function register(data: RegisterData): Promise<AuthResponse> {
 }
 
 export async function login(data: LoginData): Promise<AuthResponse> {
-  const response = await fetch(`${API_BASE_URL}/auth/login`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({
-      username: data.email,
-      password: data.password,
-    }),
-  });
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        username: data.email,
+        password: data.password,
+      }),
+    });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || "Đăng nhập thất bại");
-  }
+    if (!response.ok) {
+      let errorMessage = "Đăng nhập thất bại";
+      try {
+        const error = await response.json();
+        errorMessage = error.detail || errorMessage;
+      } catch {
+        // Nếu không parse được JSON, dùng message mặc định
+        errorMessage = `Lỗi ${response.status}: ${response.statusText}`;
+      }
+      throw new Error(errorMessage);
+    }
 
-  const result = await response.json();
-  if (result.access_token) {
-    setToken(result.access_token);
+    const result = await response.json();
+    if (result.access_token) {
+      setToken(result.access_token);
+    }
+    return result;
+  } catch (error) {
+    // Xử lý lỗi network hoặc CORS
+    if (error instanceof TypeError && error.message === "Failed to fetch") {
+      throw new Error("Không thể kết nối đến server. Vui lòng kiểm tra xem backend server đã chạy chưa (http://localhost:8000)");
+    }
+    // Re-throw các lỗi khác
+    throw error;
   }
-  return result;
 }
 
 export async function getCurrentUser(): Promise<User> {
@@ -359,6 +375,47 @@ export async function updateBookProgress(userBookId: number, progress: number): 
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.detail || "Không thể cập nhật tiến độ");
+  }
+
+  return response.json();
+}
+
+export async function followBook(bookId: number): Promise<Book> {
+  const response = await fetch(`${API_BASE_URL}/books/${bookId}/follow`, {
+    method: "POST",
+    headers: getHeaders(true),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể theo dõi sách");
+  }
+
+  return response.json();
+}
+
+export async function unfollowBook(bookId: number): Promise<Book> {
+  const response = await fetch(`${API_BASE_URL}/books/${bookId}/unfollow`, {
+    method: "POST",
+    headers: getHeaders(true),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể bỏ theo dõi sách");
+  }
+
+  return response.json();
+}
+
+export async function getFollowedBooks(): Promise<Book[]> {
+  const response = await fetch(`${API_BASE_URL}/books/user/followed`, {
+    method: "GET",
+    headers: getHeaders(true),
+  });
+
+  if (!response.ok) {
+    throw new Error("Không thể lấy danh sách sách đang theo dõi");
   }
 
   return response.json();
@@ -816,8 +873,21 @@ export async function leaveChallenge(challengeId: number): Promise<void> {
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || "Không thể rời thử thách");
+    let errorMessage = "Không thể rời thử thách";
+    try {
+      const error = await response.json();
+      errorMessage = error.detail || error.message || errorMessage;
+    } catch {
+      errorMessage = `Lỗi ${response.status}: ${response.statusText}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  // Parse response if available
+  try {
+    await response.json();
+  } catch {
+    // Response might be empty, that's okay
   }
 }
 
@@ -1061,8 +1131,140 @@ export async function deleteChallengeAdmin(challengeId: number): Promise<void> {
   });
 
   if (!response.ok) {
+    let errorMessage = "Không thể xóa thử thách";
+    try {
+      const error = await response.json();
+      errorMessage = error.detail || error.message || errorMessage;
+    } catch {
+      errorMessage = `Lỗi ${response.status}: ${response.statusText}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  // 204 No Content doesn't have a body, so we don't need to parse it
+}
+
+// ============================================
+// AUTHOR NOTIFICATIONS API
+// ============================================
+
+export interface AuthorNotification {
+  id: number;
+  author_id: number;
+  title: string;
+  content: string;
+  notification_type: string; // new_book, announcement, update
+  book_id?: number;
+  cover_url?: string;
+  author?: Author;
+  book?: Book;
+  created_by: number;
+  created_at: string;
+  is_active: boolean;
+}
+
+export async function getMyAuthorNotifications(): Promise<AuthorNotification[]> {
+  const response = await fetch(`${API_BASE_URL}/authors/notifications/my-notifications`, {
+    method: "GET",
+    headers: getHeaders(true),
+  });
+
+  if (!response.ok) {
+    throw new Error("Không thể lấy thông báo");
+  }
+
+  return response.json();
+}
+
+export async function getAuthorNotifications(authorId: number): Promise<AuthorNotification[]> {
+  const response = await fetch(`${API_BASE_URL}/authors/${authorId}/notifications`, {
+    method: "GET",
+    headers: getHeaders(false),
+  });
+
+  if (!response.ok) {
+    throw new Error("Không thể lấy thông báo của tác giả");
+  }
+
+  return response.json();
+}
+
+// ============================================
+// ADMIN - AUTHOR NOTIFICATIONS API
+// ============================================
+
+export interface AuthorNotificationCreate {
+  author_id: number;
+  title: string;
+  content: string;
+  notification_type?: string;
+  book_id?: number;
+  cover_url?: string;
+}
+
+export async function createAuthorNotification(data: AuthorNotificationCreate): Promise<AuthorNotification> {
+  const response = await fetch(`${API_BASE_URL}/admin/author-notifications`, {
+    method: "POST",
+    headers: getHeaders(true),
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.detail || "Không thể xóa thử thách");
+    throw new Error(error.detail || "Không thể tạo thông báo");
+  }
+
+  return response.json();
+}
+
+export async function getAuthorNotificationsAdmin(
+  authorId?: number,
+  isActive?: boolean
+): Promise<AuthorNotification[]> {
+  const params = new URLSearchParams();
+  if (authorId) params.append("author_id", authorId.toString());
+  if (isActive !== undefined) params.append("is_active", isActive.toString());
+
+  const response = await fetch(`${API_BASE_URL}/admin/author-notifications?${params}`, {
+    method: "GET",
+    headers: getHeaders(true),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể lấy danh sách thông báo");
+  }
+
+  return response.json();
+}
+
+export async function updateAuthorNotificationAdmin(
+  notificationId: number,
+  data: Partial<AuthorNotificationCreate & { is_active?: boolean }>
+): Promise<AuthorNotification> {
+  const response = await fetch(`${API_BASE_URL}/admin/author-notifications/${notificationId}`, {
+    method: "PATCH",
+    headers: getHeaders(true),
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể cập nhật thông báo");
+  }
+
+  return response.json();
+}
+
+export async function deleteAuthorNotificationAdmin(notificationId: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/admin/author-notifications/${notificationId}`, {
+    method: "DELETE",
+    headers: getHeaders(true),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Không thể xóa thông báo");
   }
 }
 

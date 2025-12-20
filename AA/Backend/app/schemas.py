@@ -331,3 +331,38 @@ class GroupDetailResponse(GroupResponse):
     
     class Config:
         from_attributes = True
+
+
+# Author Notification Schemas
+class AuthorNotificationBase(BaseModel):
+    title: str
+    content: str
+    notification_type: str = "new_book"  # new_book, announcement, update
+    book_id: Optional[int] = None
+    cover_url: Optional[str] = None
+
+
+class AuthorNotificationCreate(AuthorNotificationBase):
+    author_id: int
+
+
+class AuthorNotificationUpdate(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    notification_type: Optional[str] = None
+    book_id: Optional[int] = None
+    cover_url: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class AuthorNotificationResponse(AuthorNotificationBase):
+    id: int
+    author_id: int
+    author: Optional[AuthorResponse] = None
+    book: Optional[BookResponse] = None
+    created_by: int
+    created_at: datetime
+    is_active: bool
+    
+    class Config:
+        from_attributes = True

@@ -1283,68 +1283,6 @@ const GroupDetailPage = () => {
             </div>
           )}
 
-          {/* Current Book Card - Sidebar style */}
-          {group.current_book && (
-            <div style={{
-              background: "rgba(15, 23, 42, 0.7)",
-              border: "1px solid rgba(255, 255, 255, 0.06)",
-              borderRadius: "16px",
-              padding: "20px"
-            }}>
-              <div style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "16px"
-              }}>
-                <h3 style={{ color: "#e2e8f0", fontSize: "18px", fontWeight: 700 }}>Đang đọc</h3>
-                <span style={{
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  color: "#13a4ec",
-                  background: "rgba(19, 164, 236, 0.1)",
-                  padding: "4px 8px",
-                  borderRadius: "4px"
-                }}>
-                  Tháng {new Date().getMonth() + 1}
-                </span>
-              </div>
-              <div style={{ display: "flex", gap: "16px" }}>
-                <div style={{
-                  width: "96px",
-                  height: "144px",
-                  borderRadius: "8px",
-                  background: "rgba(255, 255, 255, 0.1)",
-                  flexShrink: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#94a3b8",
-                  fontSize: "32px"
-                }}>
-                  📖
-                </div>
-                <div style={{ flex: 1 }}>
-                  <h4 style={{
-                    color: "#e2e8f0",
-                    fontSize: "18px",
-                    fontWeight: 700,
-                    marginBottom: "4px"
-                  }}>
-                    {currentBookTitle}
-                  </h4>
-                  <p style={{
-                    color: "#94a3b8",
-                    fontSize: "14px"
-                  }}>
-                    {typeof group.current_book === 'object' && group.current_book.authors
-                      ? group.current_book.authors.map((a: any) => a.name).join(", ")
-                      : "Tác giả"}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
       

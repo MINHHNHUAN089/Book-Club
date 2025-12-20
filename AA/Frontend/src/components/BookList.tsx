@@ -7,6 +7,55 @@ interface BookListProps {
   onSelect: (book: Book) => void;
 }
 
+// SVG placeholder as data URI (no external dependency)
+const PLACEHOLDER_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='320'%3E%3Crect width='240' height='320' fill='%23e2e8f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='16' fill='%2394a3b8'%3ENo Cover%3C/text%3E%3C/svg%3E";
+
+// Helper function to get book cover URL
+const getBookCoverUrl = (coverUrl: string | undefined | null, bookTitle?: string): string => {
+  // Log original value for debugging
+  if (coverUrl) {
+    console.log(`[BookList] Processing cover URL for "${bookTitle || 'unknown'}":`, coverUrl);
+  } else {
+    console.warn(`[BookList] No cover URL for "${bookTitle || 'unknown'}", using placeholder`);
+    return PLACEHOLDER_IMAGE;
+  }
+  
+  // Trim whitespace
+  const trimmedUrl = coverUrl.trim();
+  if (!trimmedUrl) {
+    console.warn(`[BookList] Empty cover URL for "${bookTitle || 'unknown'}", using placeholder`);
+    return PLACEHOLDER_IMAGE;
+  }
+  
+  // If it's already a full URL (http:// or https://), return as is
+  if (trimmedUrl.startsWith("http://") || trimmedUrl.startsWith("https://")) {
+    console.log(`[BookList] Using full URL for "${bookTitle || 'unknown'}":`, trimmedUrl);
+    return trimmedUrl;
+  }
+  
+  // If it's a relative path starting with /static, add base URL
+  if (trimmedUrl.startsWith("/static") || trimmedUrl.startsWith("static/")) {
+    const baseUrl = "http://localhost:8000";
+    const fullUrl = trimmedUrl.startsWith("/") 
+      ? `${baseUrl}${trimmedUrl}` 
+      : `${baseUrl}/${trimmedUrl}`;
+    console.log(`[BookList] Resolved relative URL for "${bookTitle || 'unknown'}": ${trimmedUrl} -> ${fullUrl}`);
+    return fullUrl;
+  }
+  
+  // If it's just a filename (e.g., "book_1.jpg"), construct full path
+  if (!trimmedUrl.includes("/") && !trimmedUrl.includes("\\")) {
+    const baseUrl = "http://localhost:8000";
+    const fullUrl = `${baseUrl}/static/images/books/${trimmedUrl}`;
+    console.log(`[BookList] Constructed URL from filename for "${bookTitle || 'unknown'}": ${trimmedUrl} -> ${fullUrl}`);
+    return fullUrl;
+  }
+  
+  // Return as is for other cases (might be a Google Books URL or other format)
+  console.log(`[BookList] Using URL as-is for "${bookTitle || 'unknown'}":`, trimmedUrl);
+  return trimmedUrl;
+};
+
 const BookList = ({ books, onUpdateProgress, onSelect }: BookListProps) => {
   const navigate = useNavigate();
   
@@ -48,14 +97,35 @@ const BookList = ({ books, onUpdateProgress, onSelect }: BookListProps) => {
 
   return (
     <div className="book-grid">
-      {books.map((book) => (
+      {books.map((book) => {
+        const coverUrl = getBookCoverUrl(book.coverUrl, book.title);
+        return (
         <div className="book-card" key={book.id} onClick={() => handleSelect(book)} style={{ cursor: "pointer" }}>
-          <div
-            className="book-cover"
-            style={{ backgroundImage: `url(${book.coverUrl ?? "https://via.placeholder.com/240x320"})` }}
-            role="img"
-            aria-label={`Bìa sách ${book.title}`}
-          />
+          <div className="book-cover" style={{ position: "relative", overflow: "hidden" }}>
+            <img
+              src={coverUrl}
+              alt={`Bìa sách ${book.title}`}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                display: "block"
+              }}
+              onError={(e) => {
+                // Fallback nếu hình ảnh không load được
+                const target = e.target as HTMLImageElement;
+                console.warn(`[BookList] Failed to load image for book "${book.title}": ${coverUrl}`);
+                // Chỉ set placeholder nếu chưa phải placeholder để tránh vòng lặp vô hạn
+                if (target.src !== PLACEHOLDER_IMAGE) {
+                  target.src = PLACEHOLDER_IMAGE;
+                  target.onerror = null; // Prevent infinite loop
+                }
+              }}
+              onLoad={() => {
+                console.log(`[BookList] Successfully loaded image for book "${book.title}": ${coverUrl}`);
+              }}
+            />
+          </div>
 
           <div className="book-meta">
             <div>
@@ -122,10 +192,10 @@ const BookList = ({ books, onUpdateProgress, onSelect }: BookListProps) => {
             </div>
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 };
 
 export default BookList;
-

@@ -302,20 +302,22 @@ const ChallengesPage = ({ challenges }: ChallengesPageProps) => {
                       </button>
                     </div>
                   )}
-                  {participating && challenge.status !== "completed" && (
+                  {participating && (
                     <div className="challenges-join-section">
                       <button
                         className="challenges-leave-btn"
-                        onClick={async () => {
-                          if (!confirm("Bạn có chắc chắn muốn rời thử thách này?")) {
+                        onClick={async (e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (!window.confirm("Bạn có chắc chắn muốn rời thử thách này?")) {
                             return;
                           }
                           try {
                             await leaveChallenge(challenge.id);
-                            alert("Đã rời thử thách thành công!");
                             // Refresh my challenges
                             const myChallengesData = await getMyChallenges();
                             setMyChallenges(myChallengesData);
+                            // Reload to update UI
                             window.location.reload();
                           } catch (err) {
                             console.error("Error leaving challenge:", err);

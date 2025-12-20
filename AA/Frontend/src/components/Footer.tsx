@@ -19,7 +19,7 @@ const Footer = () => {
         maxWidth: "1200px",
         margin: "0 auto 40px"
       }}>
-        {/* Column 1: Mê Tải Sách */}
+        {/* Column 1: BookClub */}
         <div>
           <div style={{
             display: "flex",
@@ -45,7 +45,7 @@ const Footer = () => {
               fontWeight: 700,
               margin: 0
             }}>
-              Mê Tải Sách
+              BookClub
             </h3>
           </div>
           <p style={{
@@ -54,7 +54,7 @@ const Footer = () => {
             lineHeight: "1.6",
             margin: 0
           }}>
-            Mê Tải Sách là thư viện sách online cho phép người dùng tải sách miễn phí, tải sách hay, download sách miễn phí, download sách hay, đọc sách online. Chúng tôi có rất nhiều sách thuộc nhiều thể loại với những định dạng Ebook phổ biến cho điện thoại và máy tính. Bạn đọc có thể xem online hoặc download về máy để tiện theo dõi.
+            BookClub là nền tảng theo dõi đọc sách và cộng đồng book club trực tuyến. Người dùng có thể theo dõi tiến độ đọc sách, viết reviews, tham gia các book club, thử thách đọc sách và theo dõi tác giả yêu thích. Chúng tôi tạo ra một không gian để người đọc chia sẻ niềm đam mê với sách và kết nối với những người có cùng sở thích.
           </p>
         </div>
 
@@ -141,7 +141,7 @@ const Footer = () => {
           </ul>
         </div>
 
-        {/* Column 4: Thông báo */}
+        {/* Column 4: Liên hệ */}
         <div>
           <h3 style={{
             color: "#e2e8f0",
@@ -149,7 +149,7 @@ const Footer = () => {
             fontWeight: 700,
             marginBottom: "20px"
           }}>
-            Thông báo
+            Liên hệ
           </h3>
           <p style={{
             color: "#94a3b8",
@@ -157,7 +157,7 @@ const Footer = () => {
             lineHeight: "1.6",
             marginBottom: "16px"
           }}>
-            Mọi thông tin và hình ảnh trên website đều được sưu tầm trên Internet. Chúng tôi không sở hữu hay chịu trách nhiệm bất kỳ thông tin nào trên web này. Nếu làm ảnh hưởng đến cá nhân hay tổ chức nào, khi được yêu cầu, chúng tôi sẽ xem xét và gỡ bỏ ngay lập tức.
+            BookClub là một nền tảng cộng đồng dành cho những người yêu thích đọc sách. Chúng tôi khuyến khích việc chia sẻ reviews, thảo luận về sách và tham gia các hoạt động book club. Nếu bạn có bất kỳ câu hỏi hoặc góp ý nào, vui lòng liên hệ với chúng tôi.
           </p>
           <div style={{
             fontSize: "14px",
@@ -165,16 +165,23 @@ const Footer = () => {
           }}>
             Email phản hồi:{" "}
             <a
-              href="mailto:Metaisach@gmail.com"
+              href="mailto:bookclub@example.com"
               style={{
-                color: "#22c55e",
+                color: "#13a4ec",
                 textDecoration: "none",
-                fontWeight: 600
+                fontWeight: 600,
+                transition: "color 0.2s"
               }}
-              onMouseEnter={(e) => e.currentTarget.style.textDecoration = "underline"}
-              onMouseLeave={(e) => e.currentTarget.style.textDecoration = "none"}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.textDecoration = "underline";
+                e.currentTarget.style.color = "#3b82f6";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.textDecoration = "none";
+                e.currentTarget.style.color = "#13a4ec";
+              }}
             >
-              Metaisach@gmail.com
+              bookclub@example.com
             </a>
           </div>
         </div>
@@ -196,7 +203,7 @@ const Footer = () => {
           fontSize: "14px",
           textAlign: "center"
         }}>
-          Copyright © 2024. All rights reserved.
+          Copyright © 2025. All rights reserved.
         </div>
       </div>
     </footer>

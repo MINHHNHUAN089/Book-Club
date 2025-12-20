@@ -3,8 +3,11 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from app.database import get_db
-from app.models import User, Book, Review, Group, Challenge, Author, UserBook
-from app.schemas import UserResponse, BookResponse, ReviewResponse, GroupResponse, ChallengeResponse, AuthorResponse
+from app.models import User, Book, Review, Group, Challenge, Author, UserBook, AuthorNotification
+from app.schemas import (
+    UserResponse, BookResponse, ReviewResponse, GroupResponse, ChallengeResponse, AuthorResponse,
+    AuthorNotificationCreate, AuthorNotificationResponse, AuthorNotificationUpdate
+)
 from app.auth import get_current_admin_user
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -257,10 +260,21 @@ def delete_challenge(
     db: Session = Depends(get_db)
 ):
     """Delete a challenge (admin only)"""
+    from app.models import user_challenge_association
+    from sqlalchemy import delete as sql_delete
+    
     challenge = db.query(Challenge).filter(Challenge.id == challenge_id).first()
     if not challenge:
         raise HTTPException(status_code=404, detail="Challenge not found")
     
+    # Delete all participants from the challenge first
+    db.execute(
+        sql_delete(user_challenge_association).where(
+            user_challenge_association.c.challenge_id == challenge_id
+        )
+    )
+    
+    # Then delete the challenge
     db.delete(challenge)
     db.commit()
     return None
@@ -287,4 +301,117 @@ def get_admin_stats(
         "admin_users": db.query(func.count(User.id)).filter(User.role == "admin").scalar(),
     }
     return stats
+
+
+# ============================================
+# AUTHOR NOTIFICATIONS (Admin only)
+# ============================================
+
+@router.post("/author-notifications", response_model=AuthorNotificationResponse, status_code=status.HTTP_201_CREATED)
+def create_author_notification(
+    notification_data: AuthorNotificationCreate,
+    current_admin: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Create a notification for an author (admin only)"""
+    # Verify author exists
+    author = db.query(Author).filter(Author.id == notification_data.author_id).first()
+    if not author:
+        raise HTTPException(status_code=404, detail="Author not found")
+    
+    # Verify book exists if provided
+    if notification_data.book_id:
+        book = db.query(Book).filter(Book.id == notification_data.book_id).first()
+        if not book:
+            raise HTTPException(status_code=404, detail="Book not found")
+    
+    # Create notification
+    notification_dict = notification_data.model_dump()
+    db_notification = AuthorNotification(
+        created_by=current_admin.id,
+        **notification_dict
+    )
+    db.add(db_notification)
+    db.commit()
+    db.refresh(db_notification)
+    return db_notification
+
+
+@router.get("/author-notifications", response_model=List[AuthorNotificationResponse])
+def get_author_notifications(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=100),
+    author_id: Optional[int] = None,
+    is_active: Optional[bool] = None,
+    current_admin: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Get all author notifications (admin only)"""
+    query = db.query(AuthorNotification)
+    
+    if author_id:
+        query = query.filter(AuthorNotification.author_id == author_id)
+    
+    if is_active is not None:
+        query = query.filter(AuthorNotification.is_active == is_active)
+    
+    notifications = query.order_by(desc(AuthorNotification.created_at)).offset(skip).limit(limit).all()
+    return notifications
+
+
+@router.get("/author-notifications/{notification_id}", response_model=AuthorNotificationResponse)
+def get_author_notification(
+    notification_id: int,
+    current_admin: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Get a specific author notification (admin only)"""
+    notification = db.query(AuthorNotification).filter(AuthorNotification.id == notification_id).first()
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    return notification
+
+
+@router.patch("/author-notifications/{notification_id}", response_model=AuthorNotificationResponse)
+def update_author_notification(
+    notification_id: int,
+    notification_update: AuthorNotificationUpdate,
+    current_admin: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Update an author notification (admin only)"""
+    notification = db.query(AuthorNotification).filter(AuthorNotification.id == notification_id).first()
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    
+    # Verify book exists if provided
+    if notification_update.book_id:
+        book = db.query(Book).filter(Book.id == notification_update.book_id).first()
+        if not book:
+            raise HTTPException(status_code=404, detail="Book not found")
+    
+    # Update fields
+    update_data = notification_update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(notification, field, value)
+    
+    db.commit()
+    db.refresh(notification)
+    return notification
+
+
+@router.delete("/author-notifications/{notification_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_author_notification(
+    notification_id: int,
+    current_admin: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Delete an author notification (admin only)"""
+    notification = db.query(AuthorNotification).filter(AuthorNotification.id == notification_id).first()
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    
+    db.delete(notification)
+    db.commit()
+    return None
 

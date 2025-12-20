@@ -2,8 +2,8 @@ import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
 import Footer from "../components/Footer";
-import { Author } from "../api/backend";
-import { followAuthor, unfollowAuthor, getFollowedAuthors } from "../api/backend";
+import { Author, AuthorNotification } from "../api/backend";
+import { followAuthor, unfollowAuthor, getFollowedAuthors, getMyAuthorNotifications } from "../api/backend";
 
 interface AuthorsPageProps {
   authors: Author[];
@@ -15,6 +15,8 @@ const AuthorsPage = ({ authors }: AuthorsPageProps) => {
   const [activeTab, setActiveTab] = useState<"all" | "followed" | "new_books" | "recent">("all");
   const [followedAuthors, setFollowedAuthors] = useState<Author[]>([]);
   const [loadingFollowed, setLoadingFollowed] = useState(false);
+  const [notifications, setNotifications] = useState<AuthorNotification[]>([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
 
   // Fetch followed authors
   useEffect(() => {
@@ -32,6 +34,26 @@ const AuthorsPage = ({ authors }: AuthorsPageProps) => {
     };
 
     fetchFollowedAuthors();
+  }, []);
+
+  // Fetch notifications for followed authors
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      setLoadingNotifications(true);
+      try {
+        const notificationsData = await getMyAuthorNotifications();
+        console.log("Loaded notifications:", notificationsData);
+        console.log("Number of notifications:", notificationsData.length);
+        setNotifications(notificationsData);
+      } catch (err) {
+        console.error("Error fetching notifications:", err);
+        setNotifications([]);
+      } finally {
+        setLoadingNotifications(false);
+      }
+    };
+
+    fetchNotifications();
   }, []);
 
   // Check if author is followed
@@ -136,6 +158,96 @@ const AuthorsPage = ({ authors }: AuthorsPageProps) => {
           </p>
         </div>
 
+        {/* Notifications Section */}
+        {loadingNotifications && (
+          <div style={{ marginBottom: "32px", textAlign: "center", color: "#94a3b8" }}>
+            Đang tải thông báo...
+          </div>
+        )}
+        {!loadingNotifications && notifications.length > 0 && (
+          <div style={{ marginBottom: "32px" }}>
+            <h2 style={{ color: "#e2e8f0", fontSize: "20px", fontWeight: 700, marginBottom: "16px" }}>
+              🔔 Thông báo mới
+            </h2>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {notifications.slice(0, 5).map((notification) => (
+                <div
+                  key={notification.id}
+                  style={{
+                    backgroundColor: "#1e293b",
+                    borderRadius: "12px",
+                    padding: "16px",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    cursor: notification.book_id ? "pointer" : "default",
+                  }}
+                  onClick={() => {
+                    if (notification.book_id) {
+                      navigate(`/review?bookId=${notification.book_id}`);
+                    }
+                  }}
+                >
+                  <div style={{ display: "flex", gap: "12px" }}>
+                    {notification.cover_url && (
+                      <img
+                        src={notification.cover_url}
+                        alt={notification.title}
+                        style={{
+                          width: "60px",
+                          height: "80px",
+                          objectFit: "cover",
+                          borderRadius: "8px",
+                        }}
+                      />
+                    )}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                        <span style={{ color: "#13a4ec", fontSize: "12px", fontWeight: 600 }}>
+                          {notification.author?.name || "Tác giả"}
+                        </span>
+                        <span style={{ color: "#64748b", fontSize: "12px" }}>•</span>
+                        <span style={{ color: "#64748b", fontSize: "12px" }}>
+                          {notification.notification_type === "new_book" ? "Sách mới" :
+                           notification.notification_type === "announcement" ? "Thông báo" : "Cập nhật"}
+                        </span>
+                      </div>
+                      <h3 style={{ color: "#e2e8f0", fontSize: "16px", fontWeight: 700, margin: "0 0 8px" }}>
+                        {notification.title}
+                      </h3>
+                      <p style={{ color: "#94a3b8", fontSize: "14px", margin: "0 0 8px", lineHeight: "1.5" }}>
+                        {notification.content.length > 150 
+                          ? notification.content.substring(0, 150) + "..." 
+                          : notification.content}
+                      </p>
+                      <div style={{ color: "#64748b", fontSize: "12px" }}>
+                        {new Date(notification.created_at).toLocaleDateString('vi-VN', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {!loadingNotifications && notifications.length === 0 && followedAuthors.length > 0 && (
+          <div style={{ 
+            marginBottom: "32px", 
+            padding: "20px", 
+            backgroundColor: "#1e293b", 
+            borderRadius: "12px",
+            border: "1px solid rgba(255,255,255,0.1)",
+            textAlign: "center"
+          }}>
+            <div style={{ fontSize: "32px", marginBottom: "12px" }}>🔔</div>
+            <p style={{ color: "#94a3b8", fontSize: "14px", margin: 0 }}>
+              Chưa có thông báo mới từ các tác giả bạn đang theo dõi
+            </p>
+          </div>
+        )}
+
         {/* Authors Grid */}
         {filteredAuthors.length === 0 ? (
           <div style={{
@@ -162,13 +274,6 @@ const AuthorsPage = ({ authors }: AuthorsPageProps) => {
                     <h3 className="authors-name">{author.name}</h3>
                   </div>
                   <p className="authors-followers">{author.bio || "Chưa có mô tả"}</p>
-                </div>
-              </div>
-
-              {/* Activity Section */}
-              <div className="authors-activity">
-                <div className="authors-activity-empty">
-                  {author.bio || "Chưa có thông tin hoạt động"}
                 </div>
               </div>
 

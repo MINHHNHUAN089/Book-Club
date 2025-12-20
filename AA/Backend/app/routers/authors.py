@@ -1,10 +1,10 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, func
+from sqlalchemy import or_, func, desc
 from app.database import get_db
-from app.models import Author, User, Book, book_author_association
-from app.schemas import AuthorCreate, AuthorResponse, AuthorStatistics, BookResponse
+from app.models import Author, User, Book, book_author_association, AuthorNotification, user_author_follow_association
+from app.schemas import AuthorCreate, AuthorResponse, AuthorStatistics, BookResponse, AuthorNotificationResponse
 from app.auth import get_current_active_user
 
 router = APIRouter(prefix="/api/authors", tags=["authors"])
@@ -144,4 +144,73 @@ def get_author_statistics(author_id: int, db: Session = Depends(get_db)):
         total_books=total_books,
         total_followers=author.followers_count
     )
+
+
+@router.get("/notifications/my-notifications", response_model=List[AuthorNotificationResponse])
+def get_my_author_notifications(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Get notifications for authors that the current user is following"""
+    from sqlalchemy.orm import joinedload
+    
+    # Get list of author IDs that user is following
+    followed_author_ids = db.query(user_author_follow_association.c.author_id)\
+        .filter(user_author_follow_association.c.user_id == current_user.id)\
+        .all()
+    
+    followed_ids = [row[0] for row in followed_author_ids]
+    
+    if not followed_ids:
+        return []
+    
+    # Get active notifications for followed authors with eager loading
+    notifications = db.query(AuthorNotification)\
+        .options(
+            joinedload(AuthorNotification.author),
+            joinedload(AuthorNotification.book)
+        )\
+        .filter(
+            AuthorNotification.author_id.in_(followed_ids),
+            AuthorNotification.is_active == True
+        )\
+        .order_by(desc(AuthorNotification.created_at))\
+        .offset(skip)\
+        .limit(limit)\
+        .all()
+    
+    return notifications
+
+
+@router.get("/{author_id}/notifications", response_model=List[AuthorNotificationResponse])
+def get_author_notifications(
+    author_id: int,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    db: Session = Depends(get_db)
+):
+    """Get notifications for a specific author (public)"""
+    from sqlalchemy.orm import joinedload
+    
+    author = db.query(Author).filter(Author.id == author_id).first()
+    if not author:
+        raise HTTPException(status_code=404, detail="Author not found")
+    
+    notifications = db.query(AuthorNotification)\
+        .options(
+            joinedload(AuthorNotification.author),
+            joinedload(AuthorNotification.book)
+        )\
+        .filter(
+            AuthorNotification.author_id == author_id,
+            AuthorNotification.is_active == True
+        )\
+        .order_by(desc(AuthorNotification.created_at))\
+        .offset(skip)\
+        .limit(limit)\
+        .all()
+    
+    return notifications
 

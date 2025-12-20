@@ -27,13 +27,20 @@ import {
   getHeaders,
   getAllReviewsAdmin,
   AdminReview,
+  Author,
+  getAuthors,
+  AuthorNotification,
+  createAuthorNotification,
+  getAuthorNotificationsAdmin,
+  updateAuthorNotificationAdmin,
+  deleteAuthorNotificationAdmin,
 } from "../api/backend";
 
 const AdminPage = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"dashboard" | "users" | "books" | "reviews" | "groups" | "challenges">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "users" | "books" | "reviews" | "groups" | "challenges" | "notifications">("dashboard");
   
   // Stats
   const [stats, setStats] = useState<any>(null);
@@ -96,6 +103,21 @@ const AdminPage = () => {
     xp_reward: "",
   });
   const [isSavingChallenge, setIsSavingChallenge] = useState(false);
+
+  // Author Notifications
+  const [notifications, setNotifications] = useState<AuthorNotification[]>([]);
+  const [authors, setAuthors] = useState<Author[]>([]);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [editingNotification, setEditingNotification] = useState<AuthorNotification | null>(null);
+  const [notificationFormData, setNotificationFormData] = useState({
+    author_id: "",
+    title: "",
+    content: "",
+    notification_type: "new_book",
+    book_id: "",
+    cover_url: "",
+  });
+  const [isSavingNotification, setIsSavingNotification] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -176,6 +198,25 @@ const AdminPage = () => {
       }
     };
     loadChallenges();
+  }, [activeTab]);
+
+  // Load authors and notifications when notifications tab is active
+  useEffect(() => {
+    const loadNotificationsData = async () => {
+      if (activeTab === "notifications") {
+        try {
+          const [notificationsData, authorsData] = await Promise.all([
+            getAuthorNotificationsAdmin(),
+            getAuthors(),
+          ]);
+          setNotifications(notificationsData);
+          setAuthors(authorsData);
+        } catch (err) {
+          console.error("Error loading notifications data:", err);
+        }
+      }
+    };
+    loadNotificationsData();
   }, [activeTab]);
 
   const handleUpdateUser = async (userId: number, data: { role?: string; is_active?: boolean }) => {
@@ -459,6 +500,87 @@ const AdminPage = () => {
     }
   };
 
+  // Notification handlers
+  const handleOpenAddNotification = async () => {
+    // Ensure authors are loaded before opening modal
+    if (authors.length === 0) {
+      try {
+        const authorsData = await getAuthors();
+        setAuthors(authorsData);
+      } catch (err) {
+        console.error("Error loading authors:", err);
+        alert("Không thể tải danh sách tác giả. Vui lòng thử lại.");
+        return;
+      }
+    }
+    
+    setEditingNotification(null);
+    setNotificationFormData({
+      author_id: "",
+      title: "",
+      content: "",
+      notification_type: "new_book",
+      book_id: "",
+      cover_url: "",
+    });
+    setShowNotificationModal(true);
+  };
+
+  const handleSaveNotification = async () => {
+    if (!notificationFormData.author_id || !notificationFormData.title || !notificationFormData.content) {
+      alert("Vui lòng điền đầy đủ thông tin");
+      return;
+    }
+
+    setIsSavingNotification(true);
+    try {
+      const data: any = {
+        author_id: parseInt(notificationFormData.author_id),
+        title: notificationFormData.title,
+        content: notificationFormData.content,
+        notification_type: notificationFormData.notification_type,
+      };
+      
+      if (notificationFormData.book_id) {
+        data.book_id = parseInt(notificationFormData.book_id);
+      }
+      if (notificationFormData.cover_url) {
+        data.cover_url = notificationFormData.cover_url;
+      }
+
+      if (editingNotification) {
+        await updateAuthorNotificationAdmin(editingNotification.id, data);
+        alert("Đã cập nhật thông báo thành công!");
+      } else {
+        await createAuthorNotification(data);
+        alert("Đã tạo thông báo thành công!");
+      }
+
+      setShowNotificationModal(false);
+      const updatedNotifications = await getAuthorNotificationsAdmin();
+      setNotifications(updatedNotifications);
+    } catch (err) {
+      console.error("Error saving notification:", err);
+      alert(err instanceof Error ? err.message : "Không thể lưu thông báo");
+    } finally {
+      setIsSavingNotification(false);
+    }
+  };
+
+  const handleDeleteNotification = async (notificationId: number) => {
+    if (!window.confirm("Bạn có chắc muốn xóa thông báo này?")) return;
+    
+    try {
+      await deleteAuthorNotificationAdmin(notificationId);
+      alert("Đã xóa thành công!");
+      const updatedNotifications = await getAuthorNotificationsAdmin();
+      setNotifications(updatedNotifications);
+    } catch (err) {
+      console.error("Error deleting notification:", err);
+      alert(err instanceof Error ? err.message : "Không thể xóa");
+    }
+  };
+
   const handleOpenAddChallenge = () => {
     setEditingChallenge(null);
     setChallengeFormData({
@@ -611,6 +733,12 @@ const AdminPage = () => {
             onClick={() => setActiveTab("challenges")}
           >
             Thử thách
+          </button>
+          <button
+            className={`tab ${activeTab === "notifications" ? "active" : ""}`}
+            onClick={() => setActiveTab("notifications")}
+          >
+            Thông báo
           </button>
         </div>
 
@@ -1081,6 +1209,287 @@ const AdminPage = () => {
                     ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "notifications" && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+              <h2 style={{ color: "#e2e8f0", fontSize: "28px", fontWeight: 700 }}>
+                Quản lý thông báo tác giả
+              </h2>
+              <button className="primary-btn" onClick={handleOpenAddNotification}>
+                + Thêm thông báo
+              </button>
+            </div>
+            <div style={{ backgroundColor: "#1e293b", borderRadius: "12px", overflow: "hidden" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                    <th style={{ padding: "16px", textAlign: "left", color: "#cbd5e1" }}>ID</th>
+                    <th style={{ padding: "16px", textAlign: "left", color: "#cbd5e1" }}>Tác giả</th>
+                    <th style={{ padding: "16px", textAlign: "left", color: "#cbd5e1" }}>Tiêu đề</th>
+                    <th style={{ padding: "16px", textAlign: "left", color: "#cbd5e1" }}>Loại</th>
+                    <th style={{ padding: "16px", textAlign: "left", color: "#cbd5e1" }}>Trạng thái</th>
+                    <th style={{ padding: "16px", textAlign: "left", color: "#cbd5e1" }}>Ngày tạo</th>
+                    <th style={{ padding: "16px", textAlign: "left", color: "#cbd5e1" }}>Hành động</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {notifications.map((notification) => (
+                    <tr key={notification.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                      <td style={{ padding: "16px", color: "#e2e8f0" }}>{notification.id}</td>
+                      <td style={{ padding: "16px", color: "#e2e8f0" }}>
+                        {notification.author?.name || `ID: ${notification.author_id}`}
+                      </td>
+                      <td style={{ padding: "16px", color: "#e2e8f0" }}>{notification.title}</td>
+                      <td style={{ padding: "16px", color: "#94a3b8" }}>
+                        {notification.notification_type === "new_book" ? "Sách mới" : 
+                         notification.notification_type === "announcement" ? "Thông báo" : "Cập nhật"}
+                      </td>
+                      <td style={{ padding: "16px" }}>
+                        <span style={{
+                          padding: "4px 8px",
+                          borderRadius: "4px",
+                          fontSize: "12px",
+                          backgroundColor: notification.is_active ? "#22c55e" : "#64748b",
+                          color: "#fff"
+                        }}>
+                          {notification.is_active ? "Hoạt động" : "Ẩn"}
+                        </span>
+                      </td>
+                      <td style={{ padding: "16px", color: "#94a3b8" }}>
+                        {new Date(notification.created_at).toLocaleDateString('vi-VN')}
+                      </td>
+                      <td style={{ padding: "16px", display: "flex", gap: "8px" }}>
+                        <button
+                          className="primary-btn"
+                          onClick={() => {
+                            setEditingNotification(notification);
+                            setNotificationFormData({
+                              author_id: notification.author_id.toString(),
+                              title: notification.title,
+                              content: notification.content,
+                              notification_type: notification.notification_type,
+                              book_id: notification.book_id?.toString() || "",
+                              cover_url: notification.cover_url || "",
+                            });
+                            setShowNotificationModal(true);
+                          }}
+                          style={{ padding: "6px 12px", fontSize: "14px" }}
+                        >
+                          Sửa
+                        </button>
+                        <button
+                          className="secondary-btn"
+                          onClick={() => handleDeleteNotification(notification.id)}
+                          style={{ padding: "6px 12px", fontSize: "14px" }}
+                        >
+                          Xóa
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {notifications.length === 0 && (
+                    <tr>
+                      <td colSpan={7} style={{ padding: "40px", textAlign: "center", color: "#94a3b8" }}>
+                        Chưa có thông báo nào
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Notification Add/Edit Modal */}
+        {showNotificationModal && (
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: "rgba(0, 0, 0, 0.7)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 1000,
+            }}
+            onClick={() => setShowNotificationModal(false)}
+          >
+            <div
+              style={{
+                backgroundColor: "#1e293b",
+                borderRadius: "16px",
+                padding: "32px",
+                width: "90%",
+                maxWidth: "600px",
+                maxHeight: "90vh",
+                overflowY: "auto",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 style={{ color: "#e2e8f0", fontSize: "24px", fontWeight: 700, marginBottom: "24px" }}>
+                {editingNotification ? "Sửa thông báo" : "Thêm thông báo mới"}
+              </h2>
+              
+              <div style={{ marginBottom: "20px" }}>
+                <label style={{ display: "block", color: "#cbd5e1", marginBottom: "8px", fontSize: "14px" }}>
+                  Tác giả *
+                </label>
+                <select
+                  value={notificationFormData.author_id}
+                  onChange={(e) => setNotificationFormData({ ...notificationFormData, author_id: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    backgroundColor: "#0f172a",
+                    color: "#e2e8f0",
+                  }}
+                  disabled={authors.length === 0}
+                >
+                  <option value="">
+                    {authors.length === 0 ? "Đang tải danh sách tác giả..." : "Chọn tác giả"}
+                  </option>
+                  {authors.map((author) => (
+                    <option key={author.id} value={author.id}>
+                      {author.name}
+                    </option>
+                  ))}
+                </select>
+                {authors.length === 0 && (
+                  <div style={{ color: "#fca5a5", fontSize: "12px", marginTop: "4px" }}>
+                    Chưa có tác giả nào. Vui lòng thêm tác giả trước.
+                  </div>
+                )}
+              </div>
+
+              <div style={{ marginBottom: "20px" }}>
+                <label style={{ display: "block", color: "#cbd5e1", marginBottom: "8px", fontSize: "14px" }}>
+                  Tiêu đề *
+                </label>
+                <input
+                  type="text"
+                  value={notificationFormData.title}
+                  onChange={(e) => setNotificationFormData({ ...notificationFormData, title: e.target.value })}
+                  placeholder="Ví dụ: Sách mới của tác giả..."
+                  style={{
+                    width: "100%",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    backgroundColor: "#0f172a",
+                    color: "#e2e8f0",
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: "20px" }}>
+                <label style={{ display: "block", color: "#cbd5e1", marginBottom: "8px", fontSize: "14px" }}>
+                  Nội dung *
+                </label>
+                <textarea
+                  value={notificationFormData.content}
+                  onChange={(e) => setNotificationFormData({ ...notificationFormData, content: e.target.value })}
+                  placeholder="Nhập nội dung thông báo..."
+                  rows={5}
+                  style={{
+                    width: "100%",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    backgroundColor: "#0f172a",
+                    color: "#e2e8f0",
+                    resize: "vertical",
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: "20px" }}>
+                <label style={{ display: "block", color: "#cbd5e1", marginBottom: "8px", fontSize: "14px" }}>
+                  Loại thông báo
+                </label>
+                <select
+                  value={notificationFormData.notification_type}
+                  onChange={(e) => setNotificationFormData({ ...notificationFormData, notification_type: e.target.value })}
+                  style={{
+                    width: "100%",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    backgroundColor: "#0f172a",
+                    color: "#e2e8f0",
+                  }}
+                >
+                  <option value="new_book">Sách mới</option>
+                  <option value="announcement">Thông báo</option>
+                  <option value="update">Cập nhật</option>
+                </select>
+              </div>
+
+              <div style={{ marginBottom: "20px" }}>
+                <label style={{ display: "block", color: "#cbd5e1", marginBottom: "8px", fontSize: "14px" }}>
+                  ID Sách (nếu là thông báo sách mới)
+                </label>
+                <input
+                  type="number"
+                  value={notificationFormData.book_id}
+                  onChange={(e) => setNotificationFormData({ ...notificationFormData, book_id: e.target.value })}
+                  placeholder="Nhập ID sách (tùy chọn)"
+                  style={{
+                    width: "100%",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    backgroundColor: "#0f172a",
+                    color: "#e2e8f0",
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: "20px" }}>
+                <label style={{ display: "block", color: "#cbd5e1", marginBottom: "8px", fontSize: "14px" }}>
+                  URL Ảnh bìa (tùy chọn)
+                </label>
+                <input
+                  type="text"
+                  value={notificationFormData.cover_url}
+                  onChange={(e) => setNotificationFormData({ ...notificationFormData, cover_url: e.target.value })}
+                  placeholder="https://..."
+                  style={{
+                    width: "100%",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    backgroundColor: "#0f172a",
+                    color: "#e2e8f0",
+                  }}
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+                <button
+                  className="secondary-btn"
+                  onClick={() => setShowNotificationModal(false)}
+                  disabled={isSavingNotification}
+                >
+                  Hủy
+                </button>
+                <button
+                  className="primary-btn"
+                  onClick={handleSaveNotification}
+                  disabled={isSavingNotification}
+                >
+                  {isSavingNotification ? "Đang lưu..." : editingNotification ? "Cập nhật" : "Tạo mới"}
+                </button>
+              </div>
             </div>
           </div>
         )}

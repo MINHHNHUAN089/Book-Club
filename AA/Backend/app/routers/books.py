@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, func, desc
 from app.database import get_db
-from app.models import Book, Author, UserBook, User, Review
+from app.models import Book, Author, UserBook, User, Review, user_book_follow_association
 from app.schemas import BookCreate, BookUpdate, BookResponse, UserBookCreate, UserBookResponse, UserBookUpdate, BookStatistics, ReviewResponse
 from app.auth import get_current_active_user
 
@@ -355,4 +355,58 @@ def get_popular_books(
         .offset(skip).limit(limit).all()
     
     return popular_books
+
+
+@router.post("/{book_id}/follow", response_model=BookResponse)
+def follow_book(
+    book_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Follow a book to get updates"""
+    book = db.query(Book).filter(Book.id == book_id).first()
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+    
+    # Check if already following
+    if current_user in book.followers:
+        raise HTTPException(status_code=400, detail="Already following this book")
+    
+    # Add user to followers
+    book.followers.append(current_user)
+    db.commit()
+    db.refresh(book)
+    return book
+
+
+@router.post("/{book_id}/unfollow", response_model=BookResponse)
+def unfollow_book(
+    book_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Unfollow a book"""
+    book = db.query(Book).filter(Book.id == book_id).first()
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+    
+    # Check if user is following
+    if current_user not in book.followers:
+        raise HTTPException(status_code=400, detail="Not following this book")
+    
+    # Remove user from followers
+    book.followers.remove(current_user)
+    db.commit()
+    db.refresh(book)
+    return book
+
+
+@router.get("/user/followed", response_model=List[BookResponse])
+def get_followed_books(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Get current user's followed books"""
+    books = db.query(Book).filter(Book.followers.contains(current_user)).all()
+    return books
 

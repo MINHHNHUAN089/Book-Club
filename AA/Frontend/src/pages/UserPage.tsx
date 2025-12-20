@@ -1,15 +1,13 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "../components/Navigation";
 import Footer from "../components/Footer";
-import { getCurrentUser, logout, User, getMyBooks, UserBook, updateUser, changePassword } from "../api/backend";
+import { getCurrentUser, logout, User, updateUser, changePassword } from "../api/backend";
 
 const UserPage = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
-  const [userBooks, setUserBooks] = useState<UserBook[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"overview" | "settings">("overview");
   const [editMode, setEditMode] = useState(false);
   const [editData, setEditData] = useState({ name: "", email: "" });
   const [passwordData, setPasswordData] = useState({ current: "", new: "", confirm: "" });
@@ -20,12 +18,8 @@ const UserPage = () => {
     const loadUserData = async () => {
       try {
         setLoading(true);
-        const [userData, booksData] = await Promise.all([
-          getCurrentUser(),
-          getMyBooks().catch(() => []),
-        ]);
+        const userData = await getCurrentUser();
         setUser(userData);
-        setUserBooks(booksData);
       } catch (err) {
         console.error("Error loading user data:", err);
         // If not authenticated, redirect to login
@@ -44,48 +38,6 @@ const UserPage = () => {
       navigate("/");
     }
   };
-
-  // Calculate statistics based on actual progress (more reliable than status)
-  const stats = useMemo(() => {
-    const total = userBooks.length;
-    const reading = userBooks.filter((b) => {
-      const progress = b.progress || 0;
-      return progress > 0 && progress < 100;
-    }).length;
-    const wantToRead = userBooks.filter((b) => {
-      const progress = b.progress || 0;
-      return progress === 0;
-    }).length;
-    const completed = userBooks.filter((b) => {
-      const progress = b.progress || 0;
-      return progress === 100;
-    }).length;
-    const avgProgress = total > 0
-      ? Math.round(userBooks.reduce((sum, b) => sum + (b.progress || 0), 0) / total)
-      : 0;
-
-    // Debug log
-    console.log("UserPage Stats:", {
-      total,
-      reading,
-      wantToRead,
-      completed,
-      avgProgress,
-      userBooksSample: userBooks.slice(0, 3).map(b => ({
-        id: b.book_id,
-        progress: b.progress,
-        status: b.status
-      }))
-    });
-
-    return {
-      totalBooks: total,
-      reading,
-      wantToRead,
-      completed,
-      avgProgress,
-    };
-  }, [userBooks]);
 
   if (loading) {
     return (
@@ -130,55 +82,9 @@ const UserPage = () => {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="user-tabs">
-          <button
-            className={`user-tab ${activeTab === "overview" ? "active" : ""}`}
-            onClick={() => setActiveTab("overview")}
-            type="button"
-          >
-            Tổng quan
-          </button>
-          <button
-            className={`user-tab ${activeTab === "settings" ? "active" : ""}`}
-            onClick={() => setActiveTab("settings")}
-            type="button"
-          >
-            Cài đặt
-          </button>
-        </div>
-
-        {/* Tab Content */}
+        {/* Settings Content */}
         <div className="user-tab-content">
-          {activeTab === "overview" && (
-            <div className="user-overview">
-              <div className="user-stats-grid">
-                <div className="user-stat-card">
-                  <div className="user-stat-icon">📚</div>
-                  <div className="user-stat-value">{stats.totalBooks}</div>
-                  <div className="user-stat-label">Tổng số sách</div>
-                </div>
-                <div className="user-stat-card">
-                  <div className="user-stat-icon">📖</div>
-                  <div className="user-stat-value">{stats.reading}</div>
-                  <div className="user-stat-label">Đang đọc</div>
-                </div>
-                <div className="user-stat-card">
-                  <div className="user-stat-icon">⭐</div>
-                  <div className="user-stat-value">{stats.wantToRead}</div>
-                  <div className="user-stat-label">Muốn đọc</div>
-                </div>
-                <div className="user-stat-card">
-                  <div className="user-stat-icon">✅</div>
-                  <div className="user-stat-value">{stats.completed}</div>
-                  <div className="user-stat-label">Đã hoàn thành</div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "settings" && (
-            <div className="user-settings">
+          <div className="user-settings">
               <div className="user-settings-section">
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
                   <h3 className="user-settings-title">Thông tin tài khoản</h3>
@@ -324,7 +230,6 @@ const UserPage = () => {
                 </button>
               </div>
             </div>
-          )}
         </div>
       </main>
       

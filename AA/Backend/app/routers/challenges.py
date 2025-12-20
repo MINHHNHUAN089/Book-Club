@@ -1,7 +1,7 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, select, insert, update, cast, Integer
+from sqlalchemy import or_, select, insert, update, delete, cast, Integer
 from app.database import get_db
 from app.models import Challenge, User, user_challenge_association
 from app.schemas import ChallengeCreate, ChallengeResponse, UserChallengeResponse, ChallengeProgressUpdate, ChallengeStatistics
@@ -197,15 +197,28 @@ def leave_challenge(
     if not challenge:
         raise HTTPException(status_code=404, detail="Challenge not found")
     
-    # Check if user is participating
-    if current_user not in challenge.participants:
+    # Check if user is participating by checking association table directly
+    existing = db.execute(
+        select(user_challenge_association).where(
+            user_challenge_association.c.user_id == current_user.id,
+            user_challenge_association.c.challenge_id == challenge_id
+        )
+    ).first()
+    
+    if not existing:
         raise HTTPException(
             status_code=400,
             detail="You are not participating in this challenge"
         )
     
-    # Remove user from challenge
-    challenge.participants.remove(current_user)
+    # Remove user from challenge by deleting from association table
+    db.execute(
+        delete(user_challenge_association).where(
+            user_challenge_association.c.user_id == current_user.id,
+            user_challenge_association.c.challenge_id == challenge_id
+        )
+    )
+    
     db.commit()
     
     return {"message": "Successfully left the challenge"}
