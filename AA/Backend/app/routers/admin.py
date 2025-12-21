@@ -13,9 +13,6 @@ from app.auth import get_current_admin_user
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 
-# ============================================
-# USER MANAGEMENT
-# ============================================
 
 @router.get("/users", response_model=List[UserResponse])
 def get_all_users(
@@ -70,7 +67,7 @@ def update_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Prevent admin from changing their own role or deactivating themselves
+
     if user_id == current_admin.id:
         if role and role != "admin":
             raise HTTPException(
@@ -86,7 +83,6 @@ def update_user(
     if name is not None:
         user.name = name
     if email is not None:
-        # Check if email already exists
         existing = db.query(User).filter(User.email == email, User.id != user_id).first()
         if existing:
             raise HTTPException(status_code=400, detail="Email already in use")
@@ -126,9 +122,7 @@ def delete_user(
     return None
 
 
-# ============================================
-# BOOK MANAGEMENT
-# ============================================
+
 
 @router.get("/books", response_model=List[BookResponse])
 def get_all_books_admin(
@@ -164,9 +158,6 @@ def delete_book(
     return None
 
 
-# ============================================
-# REVIEW MANAGEMENT
-# ============================================
 
 @router.get("/reviews", response_model=List[ReviewResponse])
 def get_all_reviews(
@@ -205,9 +196,6 @@ def delete_review(
     return None
 
 
-# ============================================
-# GROUP MANAGEMENT
-# ============================================
 
 @router.get("/groups", response_model=List[GroupResponse])
 def get_all_groups_admin(
@@ -237,9 +225,7 @@ def delete_group(
     return None
 
 
-# ============================================
-# CHALLENGE MANAGEMENT
-# ============================================
+
 
 @router.get("/challenges", response_model=List[ChallengeResponse])
 def get_all_challenges_admin(
@@ -267,22 +253,20 @@ def delete_challenge(
     if not challenge:
         raise HTTPException(status_code=404, detail="Challenge not found")
     
-    # Delete all participants from the challenge first
+
     db.execute(
         sql_delete(user_challenge_association).where(
             user_challenge_association.c.challenge_id == challenge_id
         )
     )
     
-    # Then delete the challenge
+
     db.delete(challenge)
     db.commit()
     return None
 
 
-# ============================================
-# STATISTICS
-# ============================================
+
 
 @router.get("/stats")
 def get_admin_stats(
@@ -303,9 +287,7 @@ def get_admin_stats(
     return stats
 
 
-# ============================================
-# AUTHOR NOTIFICATIONS (Admin only)
-# ============================================
+
 
 @router.post("/author-notifications", response_model=AuthorNotificationResponse, status_code=status.HTTP_201_CREATED)
 def create_author_notification(
