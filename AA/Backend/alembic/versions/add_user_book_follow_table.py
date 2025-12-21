@@ -19,18 +19,24 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Create user_book_follow association table
-    op.create_table(
-        'user_book_follow',
-        sa.Column('user_id', sa.Integer(), nullable=False),
-        sa.Column('book_id', sa.Integer(), nullable=False),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-        sa.ForeignKeyConstraint(['book_id'], ['books.id'], ),
-        sa.PrimaryKeyConstraint('user_id', 'book_id')
-    )
-    op.create_index(op.f('ix_user_book_follow_user_id'), 'user_book_follow', ['user_id'], unique=False)
-    op.create_index(op.f('ix_user_book_follow_book_id'), 'user_book_follow', ['book_id'], unique=False)
+    # Create user_book_follow association table (only if it doesn't exist)
+    from sqlalchemy import inspect
+    conn = op.get_bind()
+    inspector = inspect(conn)
+    tables = inspector.get_table_names()
+    
+    if 'user_book_follow' not in tables:
+        op.create_table(
+            'user_book_follow',
+            sa.Column('user_id', sa.Integer(), nullable=False),
+            sa.Column('book_id', sa.Integer(), nullable=False),
+            sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+            sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+            sa.ForeignKeyConstraint(['book_id'], ['books.id'], ),
+            sa.PrimaryKeyConstraint('user_id', 'book_id')
+        )
+        op.create_index(op.f('ix_user_book_follow_user_id'), 'user_book_follow', ['user_id'], unique=False)
+        op.create_index(op.f('ix_user_book_follow_book_id'), 'user_book_follow', ['book_id'], unique=False)
 
 
 def downgrade() -> None:

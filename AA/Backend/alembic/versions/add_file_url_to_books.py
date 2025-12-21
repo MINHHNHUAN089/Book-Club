@@ -19,8 +19,14 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Add file_url column to books table
-    op.add_column('books', sa.Column('file_url', sa.String(length=500), nullable=True))
+    # Add file_url column to books table (only if it doesn't exist)
+    from sqlalchemy import inspect
+    conn = op.get_bind()
+    inspector = inspect(conn)
+    columns = [col['name'] for col in inspector.get_columns('books')]
+    
+    if 'file_url' not in columns:
+        op.add_column('books', sa.Column('file_url', sa.String(length=500), nullable=True))
 
 
 def downgrade() -> None:
